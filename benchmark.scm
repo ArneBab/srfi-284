@@ -146,4 +146,4 @@ exec guile -L . "$0"
     magnitude-typed*/return-proc
     magnitude-typed*/return->
     magnitude-typed*/return-multiple->
-    magnitude-typed*/return-proc->)) 
+    magnitude-typed*/return-proc->))

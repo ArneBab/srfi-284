@@ -89,7 +89,7 @@ The editor will add this section.</p>
 (define-typed (foo a) (integer? -> (all-integer?))
   (values a a))
     </code></pre>
-      
+
     <p>Procedures defined by <code>define-typed</code> shall call the predicate checks of their respective arguments or types before entering the procedure body must and raise errors if one or more predicates return <code>#f</code>. If return value predicates are defined, they shall run before the values are returned and likewise raise errors.</p>
 
     <p>If the implementation supports docstrings or properties, for example by using literal types after the procedure header, then they should be used after the type-header. Example from Guile with implementation-specific behavior:</p>
