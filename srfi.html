@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en"><!--
+SPDX-FileCopyrightText: 2026 Arne Babenhauserheide
+SPDX-License-Identifier: MIT
+--><head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <meta charset="utf-8">
+    <title>SRFI 284: Simple procedure argument and return types</title>
+    <link href="https://srfi.schemers.org/favicon.png" rel="icon" sizes="192x192" type="image/png">
+    <link rel="stylesheet" href="srfi-Dateien/srfi.css" type="text/css">
+    <meta name="viewport" content="width=device-width"></head>
+  <body>
+    <h1><a href="https://srfi.schemers.org/"><img class="srfi-logo" src="srfi-Dateien/srfi-logo.svg" alt="SRFI surfboard logo"></a>284: Simple procedure argument and return types</h1>
+
+<p>by Arne Babenhauserheide</p>
+
+<h2 id="status">draft</h2>
+
+<p style="color: red;">For editor's use only.  Please do not edit this section.</p>
+
+<p>??? the draft/final/withdrawn status of the SRFI, information on how
+to subscribe to its mailing list, and important dates in its history.
+The editor will add this section.</p>
+
+<h2 id="abstract">Abstract</h2>
+
+<p>This SRFI defines the forms <code>define-typed</code> and <code>define-typed*</code> for creating procedures with checked type boundaries. It allows checking the arguments and/or the return value or values with simple predicate procedures and raises exceptions on usage when they don’t match. The form <code>define-typed*</code> supports keyword and optional arguments. The implementation for Guile is optimized to allow the compiler to use the predicates as guarantees to create more optimized code and provides type information for runtime introspection that supports SRFI 283.</p>
+
+<h2 id="issues">Issues</h2>
+
+<p>It’s unclear whether <code>lambda-typed</code> should be provided. With the simpler definition here, it is possible, but it would not support the properties and would be a hassle to add to the implementation. If you don’t want to name the procedure, adding types may not be useful. However it could be useful to add state inside the procedure, e.g. via <code>(define name (let ((counter 0)) (lambda (x) (set! counter (1+ counter)) counter)))</code> </p>
+
+<h2 id="rationale">Rationale</h2>
+
+    <p>Type boundaries make it easier to learn new APIs (Stefik et. al 2014) and can enable more code validation at editing-time. This proposal is a simpler version of SRFI-253 (though its implementation predates SRFI-253), providing only procedure-level checks. It works well together with the checks for data defined in SRFI-253 and SRFI-273.</p>
+    <p>Different from <code>define-checked</code> in SRFI-253, <code>define-typed</code> does not interleave types with arguments, but provides them as second list after the arguments. This keeps the procedure arguments easier to grasp at a glance as long as they all fit on a single line, but becomes harder to understand when the procedure has more than a handful of arguments. Also the return type is defined as part of the procedure header to keep all type information in one place. But <code>define-checked</code> is clearly the better name.</p>
+    <p>The argument types and the return type are separated by <code>-></code>. This symbol was chosen, because it is commonly used to give the return type in gradual typing systems like the ones in Python and Typescript. The implementation of <code>define-typed</code> actually started with purely structural type definition spearheaded by <a href="https://github.com/sph-mn/sph-sc#functions">sph-sc</a> (with the return type first, in the position of the procedure name), but that turned out to cause more errors due to misinterpreting return-types as argument types or the other way round.</p>
+    <p>The form <code>define-typed*</code> supports named and optional arguments, while <code>define-typed</code> only supports positional arguments, because supporting named and optional arguments incurs a cost in runtime and implementation complexity.</p>
+    <p>Different from SRFI-253, this SRFI only provides two forms and no helpers, to minimize learning time. It is implemented purely in syntax-rules to improve portability, but the runtime introspection of the implementation (using procedure-properties) will require porting to be usable in other implementations, that’s why it’s unspecified here.</p>
+    <p>To avoid conceptual and implementation complexity, there is no support for procedures with variable arguments numbers or rest arguments.</p>
+    <p>The implementation for Guile is as fast as manually added type guards at the start of the bod as described in the article <a href="https://dthompson.us/posts/optimizing-guile-scheme.html">Optimizing Guile Scheme</a>. This makes <code>define-typed</code> an easier way to speed up hot inner loops, as long as the predicates give the compiler the needed information.</p>
+
+<h2 id="specification">Specification</h2>
+
+    <p>The form <code>define-typed</code> accepts an additional form after the arguments. This form contains predicates to check the arguments and/or the return value.</p>
+
+
+    <h3>Introductory Example</h3>
+    <p>To add argument and return type information the procedure</p>
+
+    <pre><code>(define (foo a)
+        (number->string a))</code></pre>
+
+    <p>a second type form is added after <code>(foo a)</code></p>
+
+    <pre><code>(define-typed (foo a) (number? -> string?)
+        (number->string a))</code></pre>
+    <p>This second form holds predicate procedures. The predicates before the <code>-></code> are the checks for the arguments, the predicate after the <code>-></code> is the check for the return value.</p>
+
+    <h3>Specification: <code>define-typed</code></h3>
+
+    <p>Formal structure: <code>(define-typed name-and-arguments types body)</code>.</p>
+
+    <p>There are three ways to call <code>define-typed</code>: only argument types, only return type, and argument-types and return types. Each type can be a predicate-procedure, a lambda form, or <code>#f</code> (for “no type check”).</p>
+
+    <p>The <em>return types</em> can be either a single predicate for a single value, for example <code>string?</code>, a form with multiple predicates for multiple values, one per value, for example <code>(string? string?)</code>, or a form with a single predicate that receives all return values as list, for example <code>(all-string?)</code>.<p>
+
+    <p>The following examples are all valid</p>
+
+    <pre><code>
+;; only type the argument
+(define-typed (foo a) (integer?)
+  (number->string a))
+
+;; only type the return value
+(define-typed (foo a) (-> string?)
+  (number->string a))
+
+;; type argument and return value
+(define-typed (foo a) (integer? -> string?)
+  (number->string a))
+
+;; type the argument and two return values
+(define-typed (foo a) (integer? -> (string? integer?))
+  (values (number->string a) a))
+
+;; type the argument and use a single predicate for all return values
+(define (all-integer? val) (not (member #f (map integer? val))))
+(define-typed (foo a) (integer? -> (all-integer?))
+  (values a a))
+    </code></pre>
+      
+    <p>Procedures defined by <code>define-typed</code> shall call the predicate checks of their respective arguments or types before entering the procedure body must and raise errors if one or more predicates return <code>#f</code>. If return value predicates are defined, they shall run before the values are returned and likewise raise errors.</p>
+
+    <p>If the implementation supports docstrings or properties, for example by using literal types after the procedure header, then they should be used after the type-header. Example from Guile with implementation-specific behavior:</p>
+
+    <pre><code>
+        (define-typed (foo a) (integer? -> string?) #((prop val)) "docstring" "return value")
+        (foo 5) ;; => "return value"
+        (procedure-documentation foo) ;; => "docstring"
+        (procedure-properties foo)
+        ;; => ((argument-types #<procedure integer? (_)>)
+        ;;     (return-type . #<procedure string? (_)>)
+        ;;     (name . foo)
+        ;;     (documentation . "docstring")
+        ;;     (prop val))
+    </code></pre>
+
+    <h3>Specification: <code>define-typed*</code></h3>
+
+    <p>The form <code>define-typed*</code> works like the form <code>define-typed</code>, but it supports named and optional arguments in the style provided by the implementation. The named and keyword arguments are typed in the way in which they are defined.</p>
+    <p>Example for Guile:</p>
+
+<pre><code>
+(define-typed* (foo x #:key bar) (float?? #:key float? -> float?)
+  x)
+</code></pre>
+
+<h2 id="implementation">Implementation</h2>
+
+<p>The sample implementation in define-typed.scm is far more complex than required, because it grew out of the structural type support, but it implements all features described here for Guile Scheme and its performance matches hand-typed code. For the simple arithmetic procedure in the benchmark, the typed version reaches 3x the performance of the untyped procedure. To check support and performance, use the test file benchmark.scm.
+
+<a href="https://srfi.schemers.org/srfi-minus-???-sample.scm">Source for the sample implementation.</a>
+
+<h2 id="acknowledgements">Acknowledgements</h2>
+
+<p>That this implementation became a SRFI is thanks to the work of Artyom Bologov in SRFI-253 and SRFI-283. That it exists at all is thanks to both the work of sph on <a href="https://github.com/sph-mn/sph-sc">sph-sc</a> and <a href="https://sph.mn/computer/guides/c/c-indent.html">c-indent</a> for the initial form of <code>define-typed</code> and the article <a href="https://dthompson.us/posts/optimizing-guile-scheme.html">Optimizing Guile Scheme</a> by David Thompson. Without these, I would likely never have started on the path that led here.</p>
+
+<h2 id="copyright">Copyright</h2>
+<p>© 2026 Arne Babenhauserheide.</p>
+
+<p>
+  Permission is hereby granted, free of charge, to any person
+  obtaining a copy of this software and associated documentation files
+  (the "Software"), to deal in the Software without restriction,
+  including without limitation the rights to use, copy, modify, merge,
+  publish, distribute, sublicense, and/or sell copies of the Software,
+  and to permit persons to whom the Software is furnished to do so,
+  subject to the following conditions:</p>
+
+<p>
+  The above copyright notice and this permission notice (including the
+  next paragraph) shall be included in all copies or substantial
+  portions of the Software.</p>
+
+<p>
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+  NONINFRINGEMENT.  IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+  BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+  ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+  CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.</p>
+
+  <hr>
+  <address>Editor: <a href="mailto:srfi-editors+at+srfi+dot+schemers+dot+org">Arthur A. Gleckler</a></address></body></html>
