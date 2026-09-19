@@ -1,3 +1,7 @@
+; SPDX-FileCopyrightText: 2026 Arne Babenhauserheide
+;
+; SPDX-License-Identifier: MIT
+
 #!/usr/bin/env bash
 # -*- mode: scheme -*-
 exec guile -L . "$0"

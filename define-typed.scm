@@ -1,3 +1,7 @@
+; SPDX-FileCopyrightText: 2026 Arne Babenhauserheide
+;
+; SPDX-License-Identifier: MIT
+
 (define-module (define-typed) #:export (define-typed* define-typed))
 
 (import (srfi :11 let-values))
