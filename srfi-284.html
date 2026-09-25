@@ -47,7 +47,7 @@ SPDX-License-Identifier: MIT
     <p>The form <code>define-typed</code> accepts an additional form after the arguments. This form contains predicates to check the arguments and/or the return value.</p>
 
 
-    <h3>Introductory Example</h3>
+    <h3 id="specification-introduction">Introductory Example</h3>
     <p>To add argument and return type information the procedure</p>
 
     <pre><code>(define (foo a)
@@ -59,7 +59,7 @@ SPDX-License-Identifier: MIT
   (number->string a))</code></pre>
     <p>This second form holds predicate procedures. The predicates before the <code>-></code> are the checks for the arguments, the predicate after the <code>-></code> is the check for the return value. If the procedure returns multiple values or a single predicate should receive the return values as list, the return type specification must be in parentheses.</p>
 
-    <h3>Specification: <code>define-typed</code></h3>
+    <h3 id="specification-define-typed">Specification: <code>define-typed</code></h3>
 
     <p>Formal structure: <code>(define-typed name-and-arguments types body)</code>.</p>
 
@@ -112,7 +112,7 @@ SPDX-License-Identifier: MIT
 ;;     (prop val))
     </code></pre>
 
-    <h3>Specification: <code>define-typed*</code></h3>
+    <h3 id="specification-define-typed-star">Specification: <code>define-typed*</code></h3>
 
     <p>The form <code>define-typed*</code> works like the form <code>define-typed</code>, but it supports named and optional arguments in the style provided by the implementation. The named and keyword arguments are typed in the way in which they are defined.</p>
     <p>Example for Guile:</p>
