@@ -26,7 +26,7 @@ SPDX-License-Identifier: MIT
 
 <h2 id="abstract">Abstract</h2>
 
-<p>This SRFI defines the forms <code>define-typed</code> and <code>define-typed*</code> for creating procedures with checked type boundaries. It allows checking the arguments and/or the return value or values with simple predicate procedures and raises exceptions on usage when they don’t match. The form <code>define-typed*</code> supports keyword and optional arguments. The implementation for Guile is optimized to allow the compiler to use the predicates as guarantees to create more optimized code and provides type information for runtime introspection that supports SRFI 283.</p>
+<p>This SRFI defines the forms <code>define-typed</code> and <code>define-typed*</code> for creating procedures with checked type boundaries. It allows checking the arguments and/or the return value or values with simple predicate procedures and raises exceptions on usage when they don’t match. The form <code>define-typed*</code> supports keyword and optional arguments. The implementation for Guile is optimized to allow the compiler to use the predicates as guarantees to create more optimized code and provides type information for runtime introspection that supports <a href="https://srfi.schemers.org/srfi-283/srfi-283.html">SRFI 283</a>.</p>
 
 <h2 id="issues">Issues</h2>
 
@@ -34,7 +34,7 @@ SPDX-License-Identifier: MIT
 
 <h2 id="rationale">Rationale</h2>
 
-    <p>Type boundaries make it easier to learn new APIs (Stefik et. al 2014) and can enable more code validation at editing-time. This proposal is a simpler version of SRFI 253 (though its implementation predates SRFI 253), providing only procedure-level checks. It works well together with the checks for data defined in SRFI 253 and SRFI 273.</p>
+    <p>Type boundaries make it easier to learn new APIs (Stefik et. al 2014) and can enable more code validation at editing-time. This proposal is a simpler version of <a href="https://srfi.schemers.org/srfi-253/srfi-253.html">SRFI 253</a> (though its implementation predates SRFI 253), providing only procedure-level checks. It works well together with the checks for data defined in SRFI 253 and <a href="https://srfi.schemers.org/srfi-273/srfi-273.html">SRFI 273</a>.</p>
     <p>Different from <code>define-checked</code> in SRFI 253, <code>define-typed</code> does not interleave types with arguments, but provides them as second list after the arguments. This keeps the procedure arguments easier to grasp at a glance as long as they all fit on a single line, but becomes harder to understand when the procedure has more than a handful of arguments. Also the return type is defined as part of the procedure header to keep all type information in one place. But <code>define-checked</code> is clearly the better name.</p>
     <p>The argument types and the return type are separated by <code>-></code>. This symbol was chosen because it is commonly used to give the return type in gradual typing systems like the ones in Python and Typescript. The implementation of <code>define-typed</code> actually started with purely structural type definition spearheaded by <a href="https://github.com/sph-mn/sph-sc#functions">sph-sc</a> (with the return type first, in the position of the procedure name), but that turned out to cause more errors due to misinterpreting return-types as argument types or the other way round.</p>
     <p>The form <code>define-typed*</code> supports named and optional arguments, while <code>define-typed</code> only supports positional arguments, because supporting named and optional arguments incurs a cost in runtime and implementation complexity.</p>
@@ -128,7 +128,7 @@ SPDX-License-Identifier: MIT
 
 <h2 id="acknowledgements">Acknowledgements</h2>
 
-<p>That this implementation became a SRFI is thanks to the work of Artyom Bologov in SRFI 253 and SRFI 283. That it exists at all is thanks to both the work of sph on <a href="https://github.com/sph-mn/sph-sc">sph-sc</a> and <a href="https://sph.mn/computer/guides/c/c-indent.html">c-indent</a> for the initial form of <code>define-typed</code> and the article <a href="https://dthompson.us/posts/optimizing-guile-scheme.html">Optimizing Guile Scheme</a> by David Thompson. Without these, I would likely never have started on the path that led here.</p>
+<p>That this implementation became a SRFI is thanks to the work of Artyom Bologov in <a href="https://srfi.schemers.org/srfi-253/srfi-253.html">SRFI 253</a> and <a href="https://srfi.schemers.org/srfi-283/srfi-283.html">SRFI 283</a>. That it exists at all is thanks to both the work of sph on <a href="https://github.com/sph-mn/sph-sc">sph-sc</a> and <a href="https://sph.mn/computer/guides/c/c-indent.html">c-indent</a> for the initial form of <code>define-typed</code> and the article <a href="https://dthompson.us/posts/optimizing-guile-scheme.html">Optimizing Guile Scheme</a> by David Thompson. Without these, I would likely never have started on the path that led here.</p>
 
 <h2 id="copyright">Copyright</h2>
 <p>© 2026 Arne Babenhauserheide.</p>
