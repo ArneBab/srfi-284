@@ -15,6 +15,7 @@
       ;; get the result
       (let ((res (proc)))
         ;; typecheck the result
+        ;; TODO report a bug in Guile that this causes trouble with => in cond when using define-inlinable
         (unless (ret? res)
           (error "type error: return value ~a does not match ~a"
                  res ret?))
