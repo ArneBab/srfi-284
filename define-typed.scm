@@ -199,7 +199,7 @@
     ;; syntax with -> ret
     ;; single -> checker: check all returned values via procedure
     ((_ (procname args ...)
-        (types ... -> (ret?))
+        (types ... (-> ret?))
         body ...)
      (define-typed (procname args ...)
        ((ret?) types ...)
@@ -207,7 +207,7 @@
     ;; two or more return checkers: one per value (fixed number of
     ;; return values!)
     ((_ (procname args ...)
-        (types ... -> (ret1? ret2* ret*? ...))
+        (types ... (-> ret1? ret2* ret*? ...))
         body ...)
      (define-typed (procname args ...)
        ((ret1? ret2* ret*? ...) types ...)
@@ -298,13 +298,13 @@
   (syntax-rules (->)
     ;; syntax with -> ret
     ;; single -> checker: check all returned values via procedure
-    ((_ (procname args ...) (types ... -> (ret?))
+    ((_ (procname args ...) (types ... (-> ret?))
         body ...)
      (define-typed* (procname args ...) ((ret?) types ...)
         body ...))
     ;; two or more return checkers: one per value (fixed number of
     ;; return values!)
-    ((_ (procname args ...) (types ... -> (ret1? ret2* ret*? ...))
+    ((_ (procname args ...) (types ... (-> ret1? ret2* ret*? ...))
         body ...)
      (define-typed* (procname args ...) ((ret1? ret2* ret*? ...) types ...)
        body ...))

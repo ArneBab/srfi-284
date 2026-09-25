@@ -57,7 +57,7 @@ SPDX-License-Identifier: MIT
 
     <pre><code>(define-typed (foo a) (number? -> string?)
   (number->string a))</code></pre>
-    <p>This second form holds predicate procedures. The predicates before the <code>-></code> are the checks for the arguments, the predicate after the <code>-></code> is the check for the return value.</p>
+    <p>This second form holds predicate procedures. The predicates before the <code>-></code> are the checks for the arguments, the predicate after the <code>-></code> is the check for the return value. If the procedure returns multiple values or a single predicate should receive the return values as list, the return type specification must be in parentheses.</p>
 
     <h3>Specification: <code>define-typed</code></h3>
 
@@ -65,7 +65,7 @@ SPDX-License-Identifier: MIT
 
     <p>There are three ways to call <code>define-typed</code>: only argument types, only return type, and argument-types and return types. Each type can be a predicate-procedure, a lambda form, or <code>#f</code> (for “no type check”).</p>
 
-    <p>The <em>return types</em> can be either a single predicate for a single value, for example <code>string?</code>, a form with multiple predicates for multiple values, one per value, for example <code>(string? string?)</code>, or a form with a single predicate that receives all return values as list, for example <code>(all-string?)</code>.</p>
+    <p>The <em>return types</em> can be either a single predicate for a single value, for example <code>-> string?</code>, a form with multiple predicates for multiple values, one per value, for example <code>(-> string? string?)</code>, or a form with a single predicate that receives all return values as list, for example <code>(-> all-string?)</code>.</p>
 
     <p>The following examples are all valid</p>
 
@@ -83,12 +83,12 @@ SPDX-License-Identifier: MIT
   (number->string a))
 
 ;; type the argument and two return values
-(define-typed (foo a) (integer? -> (string? integer?))
+(define-typed (foo a) (integer? (-> string? integer?))
   (values (number->string a) a))
 
 ;; type the argument and use a single predicate for all return values
 (define (all-integer? val) (not (member #f (map integer? val))))
-(define-typed (foo a) (integer? -> (all-integer?))
+(define-typed (foo a) (integer? (-> all-integer?))
   (values a a))
     </code></pre>
 
