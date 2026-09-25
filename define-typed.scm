@@ -268,7 +268,7 @@
 ;; specific to define-typed*
 (define-syntax check-types*
   (syntax-rules ()
-    ((_ (#f types? ...) (argument arguments ...)) ;; no type check
+    ((_ (#f types? ...) (argument arguments ...)) ;; no type check for argument
      (check-types* (types? ...) (arguments ...)))
     ;; TODO add special handling for keyword arguments used out of
     ;; order. This may need to use let-optional and let-keywords from
