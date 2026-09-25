@@ -116,7 +116,7 @@ SPDX-License-Identifier: MIT
 
     <h3 id="specification-define-typed-star">Specification: <code>define-typed*</code></h3>
 
-    <p>The form <code>define-typed*</code> works like the form <code>define-typed</code>, but it supports named and optional arguments in the style provided by the implementation. The named and optional arguments are typed in the way in which they are defined.</p>
+    <p>The form <code>define-typed*</code> works like the form <code>define-typed</code>, but it supports named and optional and rest arguments in the style provided by the implementation. The named and optional and rest arguments are typed using the same representation in which they are defined.</p>
 
     <p>This form does not yield portable code, because named and optional argument representation differ between implementations, but it provides a portable structure for named and optional arguments, using their implementation-specific representation.</p>
     <p>Example for Guile:</p>
