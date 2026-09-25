@@ -1,11 +1,11 @@
-; SPDX-FileCopyrightText: 2026 Arne Babenhauserheide
-;
-; SPDX-License-Identifier: MIT
-
 #!/usr/bin/env bash
 # -*- mode: scheme -*-
+# SPDX-FileCopyrightText: 2026 Arne Babenhauserheide
+#
+# SPDX-License-Identifier: MIT
 exec guile -L . "$0"
 ; !#
+
 (import (define-typed) (statprof))
 
 (define-inlinable (float? x)
@@ -60,18 +60,33 @@ exec guile -L . "$0"
   (sqrt (+ (* x x) (* y y))))
 
 (define-typed
+  (magnitude-typed/return->lambda x y)
+  (float? float? -> (λ (x) (float? x)))
+  (sqrt (+ (* x x) (* y y))))
+
+(define-typed
   (magnitude-typed/return-multiple-> x y)
-  (float? float? -> (float? float?))
+  (float? float? (-> float? float?))
+  (values 1.0 (sqrt (+ (* x x) (* y y)))))
+
+(define-typed
+  (magnitude-typed/return-multiple->lambda x y)
+  (float? float? (-> (λ (x) (float? x)) float?))
   (values 1.0 (sqrt (+ (* x x) (* y y)))))
 
 (define-typed
   (magnitude-typed/return-proc-> x y)
-  (float? float? -> (all-float?))
+  (float? float? (-> all-float?))
+  (values 1.0 (sqrt (+ (* x x) (* y y)))))
+
+(define-typed
+  (magnitude-typed/return-proc->lambda x y)
+  (float? float? (-> (λ (x) (all-float? x))))
   (values 1.0 (sqrt (+ (* x x) (* y y)))))
 
 (define-typed
   (magnitude-typed/return-lambda-> x y)
-  (number? number? -> ((λ (vals) (apply > vals))))
+  (number? number? (-> (λ (vals) (apply > vals))))
   (values (sqrt (+ (* x x) (* y y))) x))
 
 (define-typed*
@@ -106,17 +121,17 @@ exec guile -L . "$0"
 
 (define-typed*
   (magnitude-typed*/return-multiple-> x y #:key foo)
-  (float? float? #:key not -> (float? float?))
+  (float? float? #:key not (-> float? float?))
   (values 1.0 (sqrt (+ (* x x) (* y y)))))
 
 (define-typed*
   (magnitude-typed*/return-proc-> x y #:key foo)
-  (float? float? #:key not -> (all-float?))
+  (float? float? #:key not (-> all-float?))
   (values 1.0 (sqrt (+ (* x x) (* y y)))))
 
 (define-typed*
   (magnitude-typed*/return-lambda-> x y)
-  (number? number? -> ((λ (vals) (apply > vals))))
+  (number? number? (-> (λ (vals) (apply > vals))))
   (values (sqrt (+ (* x x) (* y y))) x))
 
 (define (benchmark proc)

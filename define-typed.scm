@@ -2,7 +2,7 @@
 ;
 ; SPDX-License-Identifier: MIT
 
-(define-module (define-typed) #:export (define-typed* define-typed))
+(define-module (define-typed) #:export (define-typed lambda-typed define-typed* lambda-typed*))
 
 (import (srfi :11 let-values))
 
@@ -10,11 +10,12 @@
 (define-inlinable (takes-single-value? proc)
   (equal? '(1 0 #f) (procedure-minimum-arity proc)))
 
-(define-inlinable (call-and-check-return-type proc ret?)
+(define (call-and-check-return-type proc ret?)
   (if ret? ;; #f means: do not check
       ;; get the result
       (let ((res (proc)))
         ;; typecheck the result
+        ;; TODO report a bug in Guile that this causes trouble with => in cond when using define-inlinable
         (unless (ret? res)
           (error "type error: return value ~a does not match ~a"
                  res ret?))
@@ -22,7 +23,7 @@
         res)
       (proc)))
 
-(define-inlinable
+(define
   (call-and-check-return-type/proc proc check-values)
   ;; get the result
   (let-values ((res (proc)))
@@ -32,7 +33,7 @@
              res check-values))
     ;; return the result
     (apply values res)))
-(define-inlinable
+(define
   (call-and-check-return-type/multiple proc return-checkers)
   ;; get the result
   (let-values ((res (proc)))
@@ -46,13 +47,13 @@
     ;; return the result
     (apply values res)))
 
-(define-inlinable (check-argument-and-type-count args types)
+(define (check-argument-and-type-count args types)
   (unless (null? types) ;; allow untyped args with return type check
     (let loop ((a args) (t types))
       (unless (equal? (pair? a) (pair? t))
         ;; (when (and (pair? a) (not (pair? (cdr a))))
         ;; a is one element longer than t ⇒ no return type
-        ;; TODO: move such a check ^ into a guard of a syntax rule.
+        ;; TODO move such a check ^ into a guard of a syntax rule.
         (error "argument error: number of arguments ~a and types ~a differs"
                args types))
       (when (pair? a)
@@ -62,7 +63,7 @@
   ;; add procedure properties via an inner procedure
   (set-procedure-properties! proc (procedure-properties from-proc))
   ;; record the types
-  (set-procedure-property! proc 'return-type ret?)
+  (set-procedure-property! proc 'return-types ret?)
   (set-procedure-property! proc 'argument-types types)
   ;; preserve the name
   (set-procedure-property! proc 'name name))
@@ -81,26 +82,57 @@
     ((_ () (arguments ...)) #f))) ;; untyped arguments are legal when there’s a return type
 
 
-(define-syntax-rule (define-typed/base procname
+(define-syntax-rule (typed/base
                       (args ...) (types ...)
                       ret-proc ret-values
                       def lamb check ;; define or define*, ...
                       body ...)
   (begin
-    (define properties-helper (lamb (args ...) body ...))
-    (def (procname args ...)
-         ;; create a sub-procedure to run after typecheck
-         (define (inner)
-           body ...)
-         ;; typecheck the arguments
-         (check (types ...) (args ...))
-         ;; get and check the result
-         (ret-proc inner ret-values))
     (check-argument-and-type-count
      (quote (args ...)) (quote (types ...)))
-    ;; add properties and return the inner procedure
-    (add-properties! procname 'procname properties-helper
-                     ret-values (list types ...))))
+    (lamb (args ...)
+      ;; create a sub-procedure to run after typecheck
+      (def inner (lamb () body ...))
+      ;; typecheck the arguments
+      (check (types ...) (args ...))
+      ;; get and check the result
+      (ret-proc inner ret-values))))
+
+(define-syntax define-typed/base
+  (syntax-rules ()
+    ((_ #f
+        (args ...) (types ...)
+        ret-proc ret-values
+        def lamb check ;; define or define*, ...
+        body ...)
+     (begin
+       (let ((proc
+              (typed/base
+               (args ...) (types ...)
+               ret-proc ret-values
+               def lamb check ;; define or define*, ...
+               body ...))
+             (properties-helper (lamb (args ...) body ...)))
+         ;; add properties to the defined procedure
+         (add-properties! proc #f properties-helper
+                          ret-values (list types ...))
+         proc)))
+    ((_ procname
+        (args ...) (types ...)
+        ret-proc ret-values
+        def lamb check ;; define or define*, ...
+        body ...)
+     (begin
+       (def procname
+            (typed/base
+             (args ...) (types ...)
+             ret-proc ret-values
+             def lamb check ;; define or define*, ...
+             body ...))
+       (let ((properties-helper (lamb (args ...) body ...)))
+         ;; add properties to the defined procedure
+         (add-properties! procname (and procname 'procname) properties-helper
+                          ret-values (list types ...)))))))
 
 ;; helper without keyword support
 (define-syntax-rule (define-typed/helper procname
@@ -199,7 +231,7 @@
     ;; syntax with -> ret
     ;; single -> checker: check all returned values via procedure
     ((_ (procname args ...)
-        (types ... -> (ret?))
+        (types ... (-> ret?))
         body ...)
      (define-typed (procname args ...)
        ((ret?) types ...)
@@ -207,7 +239,7 @@
     ;; two or more return checkers: one per value (fixed number of
     ;; return values!)
     ((_ (procname args ...)
-        (types ... -> (ret1? ret2* ret*? ...))
+        (types ... (-> ret1? ret2* ret*? ...))
         body ...)
      (define-typed (procname args ...)
        ((ret1? ret2* ret*? ...) types ...)
@@ -262,13 +294,18 @@
        (ret? types ...)
        body ...))))
 
+(define-syntax-rule (lambda-typed (args ...) body ...)
+  (define-typed (#f args ...) body ...))
 
 
 ;; specific to define-typed*
 (define-syntax check-types*
   (syntax-rules ()
-    ((_ (#f types? ...) (argument arguments ...)) ;; no type check
+    ((_ (#f types? ...) (argument arguments ...)) ;; no type check for argument
      (check-types* (types? ...) (arguments ...)))
+    ;; TODO add special handling for keyword arguments used out of
+    ;; order. This may need to use let-optional and let-keywords from
+    ;; (ice-9 optargs).
     ((_ (type? types? ...) (argument arguments ...))
      (begin
        (if (and (keyword? type?)
@@ -298,13 +335,13 @@
   (syntax-rules (->)
     ;; syntax with -> ret
     ;; single -> checker: check all returned values via procedure
-    ((_ (procname args ...) (types ... -> (ret?))
+    ((_ (procname args ...) (types ... (-> ret?))
         body ...)
      (define-typed* (procname args ...) ((ret?) types ...)
         body ...))
     ;; two or more return checkers: one per value (fixed number of
     ;; return values!)
-    ((_ (procname args ...) (types ... -> (ret1? ret2* ret*? ...))
+    ((_ (procname args ...) (types ... (-> ret1? ret2* ret*? ...))
         body ...)
      (define-typed* (procname args ...) ((ret1? ret2* ret*? ...) types ...)
        body ...))
@@ -340,3 +377,6 @@
      (define-typed/compat define-typed*/helper (procname args ...)
        (ret? types ...)
        body ...))))
+
+(define-syntax-rule (lambda-typed* (args ...) body ...)
+  (define-typed* (#f args ...) body ...))
