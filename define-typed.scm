@@ -63,7 +63,7 @@
   ;; add procedure properties via an inner procedure
   (set-procedure-properties! proc (procedure-properties from-proc))
   ;; record the types
-  (set-procedure-property! proc 'return-type ret?)
+  (set-procedure-property! proc 'return-types ret?)
   (set-procedure-property! proc 'argument-types types)
   ;; preserve the name
   (set-procedure-property! proc 'name name))
