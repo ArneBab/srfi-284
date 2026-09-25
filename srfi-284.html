@@ -30,8 +30,6 @@ SPDX-License-Identifier: MIT
 
 <h2 id="issues">Issues</h2>
 
-<p>It’s unclear whether <code>lambda-typed</code> should be provided. With the simpler definition here, it is possible, but it would not support the properties and would be a hassle to add to the implementation. If you don’t want to name the procedure, adding types may not be useful. However it could be useful to add state inside the procedure, e.g. via <code>(define name (let ((counter 0)) (lambda (x) (set! counter (1+ counter)) counter)))</code> </p>
-
 <h2 id="rationale">Rationale</h2>
 
     <p>Type boundaries make it easier to learn new APIs (Stefik et. al 2014) and can enable more code validation at editing-time. This proposal is a simpler version of <a href="https://srfi.schemers.org/srfi-253/srfi-253.html">SRFI 253</a> (though its implementation predates SRFI 253), providing only procedure-level checks. It works well together with the checks for data defined in SRFI 253 and <a href="https://srfi.schemers.org/srfi-273/srfi-273.html">SRFI 273</a>.</p>
