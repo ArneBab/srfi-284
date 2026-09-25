@@ -1,11 +1,11 @@
-; SPDX-FileCopyrightText: 2026 Arne Babenhauserheide
-;
-; SPDX-License-Identifier: MIT
-
 #!/usr/bin/env bash
 # -*- mode: scheme -*-
+# SPDX-FileCopyrightText: 2026 Arne Babenhauserheide
+#
+# SPDX-License-Identifier: MIT
 exec guile -L . "$0"
 ; !#
+
 (import (define-typed) (statprof))
 
 (define-inlinable (float? x)
