@@ -2,7 +2,7 @@
 ;
 ; SPDX-License-Identifier: MIT
 
-(define-module (define-typed) #:export (define-typed* define-typed))
+(define-module (define-typed) #:export (define-typed lambda-typed define-typed* lambda-typed*))
 
 (import (srfi :11 let-values))
 
@@ -82,26 +82,57 @@
     ((_ () (arguments ...)) #f))) ;; untyped arguments are legal when there’s a return type
 
 
-(define-syntax-rule (define-typed/base procname
+(define-syntax-rule (typed/base
                       (args ...) (types ...)
                       ret-proc ret-values
                       def lamb check ;; define or define*, ...
                       body ...)
   (begin
-    (define properties-helper (lamb (args ...) body ...))
-    (def (procname args ...)
-         ;; create a sub-procedure to run after typecheck
-         (define (inner)
-           body ...)
-         ;; typecheck the arguments
-         (check (types ...) (args ...))
-         ;; get and check the result
-         (ret-proc inner ret-values))
     (check-argument-and-type-count
      (quote (args ...)) (quote (types ...)))
-    ;; add properties and return the inner procedure
-    (add-properties! procname 'procname properties-helper
-                     ret-values (list types ...))))
+    (lamb (args ...)
+      ;; create a sub-procedure to run after typecheck
+      (def inner (lamb () body ...))
+      ;; typecheck the arguments
+      (check (types ...) (args ...))
+      ;; get and check the result
+      (ret-proc inner ret-values))))
+
+(define-syntax define-typed/base
+  (syntax-rules ()
+    ((_ #f
+        (args ...) (types ...)
+        ret-proc ret-values
+        def lamb check ;; define or define*, ...
+        body ...)
+     (begin
+       (let ((proc
+              (typed/base
+               (args ...) (types ...)
+               ret-proc ret-values
+               def lamb check ;; define or define*, ...
+               body ...))
+             (properties-helper (lamb (args ...) body ...)))
+         ;; add properties to the defined procedure
+         (add-properties! proc #f properties-helper
+                          ret-values (list types ...))
+         proc)))
+    ((_ procname
+        (args ...) (types ...)
+        ret-proc ret-values
+        def lamb check ;; define or define*, ...
+        body ...)
+     (begin
+       (def procname
+            (typed/base
+             (args ...) (types ...)
+             ret-proc ret-values
+             def lamb check ;; define or define*, ...
+             body ...))
+       (let ((properties-helper (lamb (args ...) body ...)))
+         ;; add properties to the defined procedure
+         (add-properties! procname (and procname 'procname) properties-helper
+                          ret-values (list types ...)))))))
 
 ;; helper without keyword support
 (define-syntax-rule (define-typed/helper procname
@@ -263,6 +294,8 @@
        (ret? types ...)
        body ...))))
 
+(define-syntax-rule (lambda-typed (args ...) body ...)
+  (define-typed (#f args ...) body ...))
 
 
 ;; specific to define-typed*
@@ -344,3 +377,6 @@
      (define-typed/compat define-typed*/helper (procname args ...)
        (ret? types ...)
        body ...))))
+
+(define-syntax-rule (lambda-typed* (args ...) body ...)
+  (define-typed* (#f args ...) body ...))
