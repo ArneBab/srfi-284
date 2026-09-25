@@ -53,7 +53,7 @@
       (unless (equal? (pair? a) (pair? t))
         ;; (when (and (pair? a) (not (pair? (cdr a))))
         ;; a is one element longer than t ⇒ no return type
-        ;; TODO: move such a check ^ into a guard of a syntax rule.
+        ;; TODO move such a check ^ into a guard of a syntax rule.
         (error "argument error: number of arguments ~a and types ~a differs"
                args types))
       (when (pair? a)
