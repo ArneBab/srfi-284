@@ -10,7 +10,7 @@
 (define-inlinable (takes-single-value? proc)
   (equal? '(1 0 #f) (procedure-minimum-arity proc)))
 
-(define-inlinable (call-and-check-return-type proc ret?)
+(define (call-and-check-return-type proc ret?)
   (if ret? ;; #f means: do not check
       ;; get the result
       (let ((res (proc)))
@@ -23,7 +23,7 @@
         res)
       (proc)))
 
-(define-inlinable
+(define
   (call-and-check-return-type/proc proc check-values)
   ;; get the result
   (let-values ((res (proc)))
@@ -33,7 +33,7 @@
              res check-values))
     ;; return the result
     (apply values res)))
-(define-inlinable
+(define
   (call-and-check-return-type/multiple proc return-checkers)
   ;; get the result
   (let-values ((res (proc)))
@@ -47,7 +47,7 @@
     ;; return the result
     (apply values res)))
 
-(define-inlinable (check-argument-and-type-count args types)
+(define (check-argument-and-type-count args types)
   (unless (null? types) ;; allow untyped args with return type check
     (let loop ((a args) (t types))
       (unless (equal? (pair? a) (pair? t))
