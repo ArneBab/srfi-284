@@ -67,6 +67,8 @@ SPDX-License-Identifier: MIT
 
     <p>Each <em>type</em> can be a predicate-procedure, a lambda form, or <code>#f</code> (for “no type check”).</p>
 
+    <p>The <em>argument types</em> must contain one <em>type</em> (as described above) per argument.</p>
+
     <p>The <em>return types</em> can be either a single predicate for a single value, for example <code>-> string?</code>, a form with multiple predicates for multiple values, one per value, for example <code>(-> string? string?)</code>, or a form with a single predicate that receives all return values as list, for example <code>(-> all-string?)</code>.</p>
 
     <p>The following examples are all valid</p>
