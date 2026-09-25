@@ -98,7 +98,9 @@ SPDX-License-Identifier: MIT
 
     <p>Procedures defined by <code>define-typed</code> shall call the predicate checks of their respective arguments or types before entering the procedure body must and raise errors if one or more predicates return <code>#f</code>. If return value predicates are defined, they shall run before the values are returned and likewise raise errors.</p>
 
-    <p>If the implementation supports docstrings or properties, for example by using literal types after the procedure header, then they should be used after the type-header. Example from Guile with implementation-specific behavior:</p>
+    <p>The implementation should store argument type and return type information in a way that makes it easy to access with type introspections, i.e. as described in <a href="https://srfi.schemers.org/srfi-283/srfi-283.html">SRFI 283</a>.</p>
+
+    <p>If the implementation supports procedure docstrings or procedure properties, for example by using literal types after the procedure header, then they should be used after the type-header. Example from Guile with implementation-specific behavior:</p>
 
     <pre><code>
 (define-typed (foo a) (integer? -> string?) #((prop val)) "docstring" "return value")
