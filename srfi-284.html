@@ -138,14 +138,20 @@ SPDX-License-Identifier: MIT
     
     <h3 id="specification-define-typed-star">Specification: <code>define-typed*</code></h3>
 
-    <p>The form <code>define-typed*</code> works like the form <code>define-typed</code>, but it supports named and optional and rest arguments in the style provided by the implementation. The named and optional and rest arguments are typed using the same representation in which they are defined.</p>
+    <p>The form <code>define-typed*</code> works like the form <code>define-typed</code>, but it should support named and optional argument and must support rest arguments in the style provided by the implementation. The named and optional and rest arguments are typed using the same representation in which they are defined.</p>
 
     <p>This form does not yield portable code, because named and optional argument representation differ between implementations, but it provides a portable structure for named and optional arguments, using their implementation-specific representation.</p>
-    <p>Example for Guile:</p>
 
-<pre><code>
-(define-typed* (foo x #:key bar) (float? #:key float? -> float?)
+    <p>Support for rest arguments is required (must) while named (keyword) and optional arguments are optional (should), because support for rest arguments is necessary to enable all possibilities of regular <code>define</code> and <code>labmda</code>.</p>
+    <p>Examples for Guile:</p>
+
+    <pre><code>
+(import (only (srfi :1) every))
+(define-typed* (foo x #:key bar) (number? #:key number? -> number?)
   x)
+(define (all-number? x) (every identity (map number? x)))
+(define-typed* (foo x #:rest r) (number? #:rest all-number? -> all-number?)
+  r)
 </code></pre>
 
     <h3 id="specification-lambda-typed-and-lambda-typed*">Specification: <code>lambda-typed</code> and <code>lambda-typed*</code></h3>
@@ -154,7 +160,7 @@ SPDX-License-Identifier: MIT
 
 <h2 id="implementation">Implementation</h2>
 
-<p>The sample implementation in <a href="define-typed.scm">define-typed.scm</a> is far more complex than required because it grew out of the structural type support, but it implements all features described here for Guile Scheme, and its performance matches that of hand-typed code. For the simple arithmetic procedure in the benchmark, the typed version reaches 3x the performance of the untyped procedure. To check support and performance, use the test file <a href="benchmark.scm">benchmark.scm</a>.
+<p>The sample implementation in <a href="define-typed.scm">define-typed.scm</a> is far more complex than required because it grew out of the structural type support, but it implements all features described here for Guile Scheme, and its performance matches that of hand-typed code. For the simple arithmetic procedure in the benchmark, the typed version reaches 3x the performance of the untyped procedure. The included implementation of <code>define-typed*</code> very likely still contains nasty bugs, but its rest argument support is tested. To check support and performance, use the test file <a href="benchmark.scm">benchmark.scm</a>.
 
 <h2 id="acknowledgements">Acknowledgements</h2>
 
