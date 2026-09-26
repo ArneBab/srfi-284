@@ -268,12 +268,12 @@
         ((ret1? ret2* ret*? ...) types ...)
         body ...)
      (begin
-       (define return-checkers (list ret1? ret2* ret*? ...))
-       (define-typed/helper procname (args ...)
-         (types ...)
-         call-and-check-return-type/multiple
-         return-checkers
-         body ...)))
+       (let ((return-checkers (list ret1? ret2* ret*? ...)))
+         (define-typed/helper procname (args ...)
+           (types ...)
+           call-and-check-return-type/multiple
+           return-checkers
+           body ...))))
     ;; alternate single return syntax with -> ret
     ((_ (procname args ...)
         (types ... -> ret?)
@@ -364,11 +364,11 @@
     ((_ (procname args ...) ((ret1? ret2* ret*? ...) types ...)
         body ...)
      (begin
-       (define return-checkers (list ret1? ret2* ret*? ...))
-       (define-typed*/helper procname (args ...) (types ...)
-         call-and-check-return-type/multiple
-         return-checkers
-         body ...)))
+       (let ((return-checkers (list ret1? ret2* ret*? ...)))
+         (define-typed*/helper procname (args ...) (types ...)
+           call-and-check-return-type/multiple
+           return-checkers
+           body ...))))
     ;; single return checker: only check one value, further values are
     ;; discarded except if ret? is #f: then do not check, keep all
     ;; values
