@@ -130,7 +130,7 @@ SPDX-License-Identifier: MIT
         | (&lt;argtype> ...)                    ; 4: args only
 &lt;artype> = #f | symbol | &lt;predicate-form>
 &lt;rettype> = #f | symbol | &lt;predicate-form>
-&lt;retlisttype> = procedure that receives a list with all return values and returns a true value or #f
+&lt;retlisttype> = &lt;predicate-form> that receives a list with all return values
 &lt;predicate-form> = a form evaluating to a procedure with one argument that returns a true value or #f
 &lt;body> = as per R7RS section 4.1.4
 </code></pre>
