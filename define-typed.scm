@@ -234,7 +234,7 @@
         (types ... (-> ret?))
         body ...)
      (define-typed (procname args ...)
-       ((ret?) types ...)
+       ((-> ret?) types ...)
         body ...))
     ;; two or more return checkers: one per value (fixed number of
     ;; return values!)
@@ -242,7 +242,7 @@
         (types ... (-> ret1? ret2* ret*? ...))
         body ...)
      (define-typed (procname args ...)
-       ((ret1? ret2* ret*? ...) types ...)
+       ((-> ret1? ret2* ret*? ...) types ...)
        body ...))
     ;; alternate single return value syntax with -> ret
     ((_ (procname args ...)
@@ -255,7 +255,7 @@
        body ...))
     ;; single checker: check all returned values via procedure
     ((_ (procname args ...)
-        ((ret?) types ...)
+        ((-> ret?) types ...)
         body ...)
      (define-typed/helper procname (args ...)
        (types ...)
@@ -265,7 +265,7 @@
     ;; two or more return checkers: one per value (fixed number of
     ;; return values!)
     ((_ (procname args ...)
-        ((ret1? ret2* ret*? ...) types ...)
+        ((-> ret1? ret2* ret*? ...) types ...)
         body ...)
      (define-typed/helper procname (args ...)
        (types ...)
@@ -335,13 +335,15 @@
     ;; single -> checker: check all returned values via procedure
     ((_ (procname args ...) (types ... (-> ret?))
         body ...)
-     (define-typed* (procname args ...) ((ret?) types ...)
+     (define-typed* (procname args ...)
+       ((-> ret?) types ...)
         body ...))
     ;; two or more return checkers: one per value (fixed number of
     ;; return values!)
     ((_ (procname args ...) (types ... (-> ret1? ret2* ret*? ...))
         body ...)
-     (define-typed* (procname args ...) ((ret1? ret2* ret*? ...) types ...)
+     (define-typed* (procname args ...)
+       ((-> ret1? ret2* ret*? ...) types ...)
        body ...))
     ;; alternate single return value syntax with -> ret
     ((_ (procname args ...) (types ... -> ret?)
@@ -351,7 +353,8 @@
        ret?
        body ...))
     ;; single checker: check all returned values via procedure
-    ((_ (procname args ...) ((ret?) types ...)
+    ((_ (procname args ...)
+        ((-> ret?) types ...)
         body ...)
      (define-typed*/helper procname (args ...) (types ...)
        call-and-check-return-type/proc
@@ -360,7 +363,7 @@
     ;; two or more return checkers: one per value (fixed number of
     ;; return values!)
     ((_ (procname args ...)
-        ((ret1? ret2* ret*? ...) types ...)
+        ((-> ret1? ret2* ret*? ...) types ...)
         body ...)
      (define-typed*/helper procname (args ...)
        (types ...)

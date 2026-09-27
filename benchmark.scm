@@ -36,17 +36,17 @@ exec guile -L . "$0"
 
 (define-typed
   (magnitude-typed/return-multiple x y)
-  ((float? float?) float? float?)
+  ((-> float? float?) float? float?)
   (values 1.0 (sqrt (+ (* x x) (* y y)))))
 
 (define-typed
   (magnitude-typed/return-proc x y)
-  ((all-float?) float? float?)
+  ((-> all-float?) float? float?)
   (values 1.0 (sqrt (+ (* x x) (* y y)))))
 
 (define-typed
   (magnitude-typed/return-lambda x y)
-  (((λ (vals) (apply > vals))) number? number?)
+  ((-> (λ (vals) (apply > vals))) number? number?)
   (values (sqrt (+ (* x x) (* y y))) x))
 
 (define-typed
@@ -116,12 +116,12 @@ exec guile -L . "$0"
 
 (define-typed*
   (magnitude-typed*/return-multiple x y #:key foo)
-  ((float? float?) float? float? #:key not)
+  ((-> float? float?) float? float? #:key not)
   (values 1.0 (sqrt (+ (* x x) (* y y)))))
 
 (define-typed*
   (magnitude-typed*/return-proc x y #:key foo)
-  ((all-float?) float? float? #:key not)
+  ((-> all-float?) float? float? #:key not)
   (values 1.0 (sqrt (+ (* x x) (* y y)))))
 
 (define-typed*
