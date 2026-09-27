@@ -361,11 +361,13 @@
        body ...))
     ;; two or more return checkers: one per value (fixed number of
     ;; return values!)
-    ((_ (procname args ...) ((ret1? ret2* ret*? ...) types ...)
+    ((_ (procname args ...)
+        ((ret1? ret2* ret*? ...) types ...)
         body ...)
      (begin
        (let ((return-checkers (list ret1? ret2* ret*? ...)))
-         (define-typed*/helper procname (args ...) (types ...)
+         (define-typed*/helper procname (args ...)
+           (types ...)
            call-and-check-return-type/multiple
            return-checkers
            body ...))))
