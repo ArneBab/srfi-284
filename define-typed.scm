@@ -303,9 +303,9 @@
   (syntax-rules ()
     ((_ (#f types? ...) (argument arguments ...)) ;; no type check for argument
      (check-types* (types? ...) (arguments ...)))
-    ;; TODO add special handling for keyword arguments used out of
-    ;; order. This may need to use let-optional and let-keywords from
-    ;; (ice-9 optargs).
+    ;; special handling for keyword arguments with default value.
+    ((_ (type? types? ...) ((keyword-name default) arguments ...))
+     (check-types* (type? types? ...) (keyword-name arguments ...)))
     ((_ (type? types? ...) (argument arguments ...))
      (begin
        (if (and (keyword? type?)
