@@ -150,11 +150,6 @@ exec guile -L . "$0"
   (values 1.0 (sqrt (+ (* x x) (* y y)))))
 
 (define-typed*
-  (magnitude-typed*/return-proc-> x y #:key foo)
-  (float? float? #:key not (-> all-float?))
-  (values 1.0 (sqrt (+ (* x x) (* y y)))))
-
-(define-typed*
   (magnitude-typed*/return-lambda-> x y)
   (number? number? (-> (λ (vals) (apply > vals))))
   (values (sqrt (+ (* x x) (* y y))) x))
