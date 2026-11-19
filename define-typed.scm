@@ -2,9 +2,10 @@
 ;
 ; SPDX-License-Identifier: MIT
 
-(define-module (define-typed) #:export (define-typed lambda-typed define-typed* lambda-typed*))
-
-(import (srfi :11 let-values))
+(define-module (define-typed)
+  #:export (define-typed lambda-typed define-typed* lambda-typed*)
+  #:use-module (srfi srfi-11)
+  #:re-export (let-values))
 
 ;; common procedures
 (define-inlinable (takes-single-value? proc)
