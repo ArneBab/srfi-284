@@ -11,7 +11,11 @@ exec guile -L . "$0"
 (define-inlinable (float? x)
   (and (real? x) (inexact? x)))
 (define-inlinable (all-float? args)
-  (not (member #f (map float? args))))
+  (let loop ((args args))
+    (cond ((null? args) #t)
+          ((float? (car args))
+           (loop (cdr args)))
+          (else #f))))
 
 (define (magnitude x y) (sqrt (+ (* x x) (* y y))))
 (define (magnitude-handtyped x y)
