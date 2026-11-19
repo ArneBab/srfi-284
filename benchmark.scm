@@ -30,6 +30,18 @@ exec guile -L . "$0"
   (sqrt (+ (* x x) (* y y))))
 
 (define-typed
+  (magnitude-typed/rest-each a . b) (float? :: float? -> float?)
+  (sqrt (+ (* a a) (apply * b))))
+
+(define-typed
+  (magnitude-typed/rest-one-for-all a . b) (float? (:: all-float?) -> float?)
+  (sqrt (+ (* a a) (apply * b))))
+
+(define-typed
+   (magnitude-typed/rest-two-alternating a . b) (float? (:: float? string?) -> float?)
+   (sqrt (+ (* a a) (car b))))
+
+(define-typed
   (magnitude-typed/return x y)
   (float? float? float?)
   (sqrt (+ (* x x) (* y y))))
@@ -168,6 +180,9 @@ exec guile -L . "$0"
     magnitude
     magnitude-handtyped
     magnitude-typed/no-return-check
+    magnitude-typed/rest-each
+    magnitude-typed/rest-one-for-all
+    magnitude-typed/rest-two-alternating
     magnitude-typed/no-return-check-by-missing-type
     magnitude-typed/return
     magnitude-typed/return-multiple
