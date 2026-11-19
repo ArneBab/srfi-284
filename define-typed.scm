@@ -60,6 +60,8 @@
       (when (pair? a)
         (loop (cdr a) (cdr t))))))
 
+;; inlinable add-properties!, because guild compile -W3 define-typed.scm
+;; marks it as possibly unused otherwise.
 (define-inlinable (add-properties! proc name from-proc ret? types)
   ;; add procedure properties via an inner procedure
   (set-procedure-properties! proc (procedure-properties from-proc))
