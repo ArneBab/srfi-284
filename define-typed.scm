@@ -60,7 +60,7 @@
       (when (pair? a)
         (loop (cdr a) (cdr t))))))
 
-(define (add-properties! proc name from-proc ret? types)
+(define-inlinable (add-properties! proc name from-proc ret? types)
   ;; add procedure properties via an inner procedure
   (set-procedure-properties! proc (procedure-properties from-proc))
   ;; record the types
