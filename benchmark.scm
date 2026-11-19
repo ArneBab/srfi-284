@@ -184,11 +184,11 @@ exec guile -L . "$0"
     magnitude
     magnitude-handtyped
     magnitude-typed/no-return-check
+    magnitude-typed/return
     magnitude-typed/rest-each
     magnitude-typed/rest-one-for-all
     magnitude-typed/rest-two-alternating
     magnitude-typed/no-return-check-by-missing-type
-    magnitude-typed/return
     magnitude-typed/return-multiple
     magnitude-typed/return-proc
     magnitude-typed/return-lambda
