@@ -34,21 +34,21 @@ exec guile -L . "$0"
   (sqrt (+ (* x x) (* y y))))
 
 (define-typed
-  (magnitude-typed/rest-each a . b) (float? :: float? -> float?)
-  (sqrt (+ (* a a) (apply * b))))
-
-(define-typed
-  (magnitude-typed/rest-one-for-all a . b) (float? (:: all-float?) -> float?)
-  (sqrt (+ (* a a) (apply * b))))
-
-(define-typed
-   (magnitude-typed/rest-two-alternating a . b) (float? (:: float? string?) -> float?)
-   (sqrt (+ (* a a) (car b))))
-
-(define-typed
   (magnitude-typed/return x y)
   (float? float? float?)
   (sqrt (+ (* x x) (* y y))))
+
+(define-typed
+  (magnitude-typed/rest-each a b . c) (float? float? :: float? -> float?)
+  (sqrt (+ (* a a) (* b b))))
+
+(define-typed
+  (magnitude-typed/rest-one-for-all a b . c) (float? float? (:: all-float?) -> float?)
+  (sqrt (+ (* a a) (* b b))))
+
+(define-typed
+   (magnitude-typed/rest-two-alternating a b . c) (float? float? (:: float? string?) -> float?)
+   (sqrt (+ (* a a) (* b b))))
 
 (define-typed
   (magnitude-typed/return-multiple x y)
