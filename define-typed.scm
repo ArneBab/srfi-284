@@ -287,7 +287,11 @@
 
 (define-syntax-rule (each-rest predicate)
   (lambda (args)
-    (not (member #f (map predicate args)))))
+    (let loop ((args args))
+      (cond ((null? args) #t)
+            ((predicate (car args))
+             (loop (cdr args)))
+            (else #f)))))
 
 (define-syntax-rule (circular-rest predicates)
   (lambda (args)
