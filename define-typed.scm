@@ -372,7 +372,35 @@
         body ...)
      (define-typed/helper procname (args ...)
        (types ...)
-       #f ;; TODO three more blocks for rest? support
+       #f
+       call-and-check-return-type/proc
+       ret?
+       body ...))
+    ;; with rest arguments – using the original form with (-> ret?) at the end
+    ((_ (procname args ... . rest)
+        (types ... :: rest? (-> ret?))
+        body ...)
+     (define-typed/helper procname (args ... . rest)
+       (types ...)
+       (each-rest rest?)
+       call-and-check-return-type/proc
+       ret?
+       body ...))
+    ((_ (procname args ... . rest)
+        (types ... (:: rest?) (-> ret?))
+        body ...)
+     (define-typed/helper procname (args ... . rest)
+       (types ...)
+       rest?
+       call-and-check-return-type/proc
+       ret?
+       body ...))
+    ((_ (procname args ... . rest)
+        (types ... (:: rest1? rest2? rest*? ...) (-> ret?))
+        body ...)
+     (define-typed/helper procname (args ... . rest)
+       (types ...)
+       (circular-rest (list rest1? rest2? rest*? ...))
        call-and-check-return-type/proc
        ret?
        body ...))
@@ -387,7 +415,34 @@
        call-and-check-return-type/multiple
        (list ret1? ret2? ret*? ...) ;; return-checkers
        body ...))
-    ;; single return checker: only check one value, further values are
+    ;; with rest arguments – using the original form with (-> (list ret1? ret2? ret*? ...) ...) at the end
+    ((_ (procname args ... . rest)
+        (types ... :: rest? (-> ret1? ret2? ret*? ...))
+        body ...)
+     (define-typed/helper procname (args ... . rest)
+       (types ...)
+       (each-rest rest?)
+       call-and-check-return-type/multiple
+       (list ret1? ret2? ret*? ...)
+       body ...))
+    ((_ (procname args ... . rest)
+        (types ... (:: rest?) (-> ret1? ret2? ret*? ...))
+        body ...)
+     (define-typed/helper procname (args ... . rest)
+       (types ...)
+       rest?
+       call-and-check-return-type/multiple
+       (list ret1? ret2? ret*? ...)
+       body ...))
+    ((_ (procname args ... . rest)
+        (types ... (:: rest1? rest2? rest*? ...) (-> ret1? ret2? ret*? ...))
+        body ...)
+     (define-typed/helper procname (args ... . rest)
+       (types ...)
+       (circular-rest (list rest1? rest2? rest*? ...))
+       call-and-check-return-type/multiple
+       (list ret1? ret2? ret*? ...)
+       body ...))    ;; single return checker: only check one value, further values are
     ;; discarded except if ret? is #f: then do not check, keep all
     ;; values
     ;; Compat for return type delimited by ->: if there is one arg
@@ -397,7 +452,10 @@
      (define-typed/compat define-typed/helper (procname args ...)
        (ret? types ...)
        body ...))))
-    ;; TODO add blocks for rest support without ret?
+    ;; TODO add blocks for rest support without ret? Do not support
+    ;; ret? types ... :: rest? for now, that’s already provided by
+    ;; :: rest? -> ret? ⇒ (types ... :: rest?) need not check for
+    ;; a return type as long as rest? does not support ret? t ...
 
 (define-syntax lambda-typed
   (syntax-rules ()

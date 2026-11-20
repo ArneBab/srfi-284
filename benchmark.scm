@@ -47,8 +47,35 @@ exec guile -L . "$0"
   (sqrt (+ (* a a) (* b b))))
 
 (define-typed
-   (magnitude-typed/rest-two-alternating a b . c) (float? float? (:: float? string?) -> float?)
-   (sqrt (+ (* a a) (* b b))))
+  (magnitude-typed/rest-two-alternating a b . c) (float? float? (:: float? string?) -> float?)
+  (sqrt (+ (* a a) (* b b))))
+
+(define-typed
+  (magnitude-typed/rest-each-ret-proc-> a b . c) (float? float? :: float? (-> all-float?))
+  (sqrt (+ (* a a) (* b b))))
+
+(define-typed
+  (magnitude-typed/rest-one-for-all-ret-proc-> a b . c) (float? float? (:: all-float?) (-> all-float?))
+  (sqrt (+ (* a a) (* b b))))
+
+(define-typed
+  (magnitude-typed/rest-two-alternating-ret-proc-> a b . c) (float? float? (:: float? string?) (-> all-float?))
+  (sqrt (+ (* a a) (* b b))))
+
+(define-typed
+  (magnitude-typed/rest-each-ret-multiple-> a b . c) (float? float? :: float? (-> float? float?))
+  (values 1.0 (sqrt (+ (* a a) (* b b)))))
+
+(define-typed
+  (magnitude-typed/rest-one-for-all-ret-multiple-> a b . c) (float? float? (:: all-float?) (-> float? float?))
+  (values 1.0 (sqrt (+ (* a a) (* b b)))))
+
+(define-typed
+  (magnitude-typed/rest-two-alternating-ret-multiple-> a b . c) (float? float? (:: float? string?) (-> float? float?))
+  (values 1.0 (sqrt (+ (* a a) (* b b)))))
+
+
+;; return types
 
 (define-typed
   (magnitude-typed/return-multiple x y)
@@ -185,9 +212,17 @@ exec guile -L . "$0"
     magnitude-handtyped
     magnitude-typed/no-return-check
     magnitude-typed/return
+    ;; rest argument examples
     magnitude-typed/rest-each
     magnitude-typed/rest-one-for-all
     magnitude-typed/rest-two-alternating
+    magnitude-typed/rest-each-ret-proc->
+    magnitude-typed/rest-one-for-all-ret-proc->
+    magnitude-typed/rest-two-alternating-ret-proc->
+    magnitude-typed/rest-each-ret-multiple->
+    magnitude-typed/rest-one-for-all-ret-multiple->
+    magnitude-typed/rest-two-alternating-ret-multiple->
+    ;; return check examples
     magnitude-typed/no-return-check-by-missing-type
     magnitude-typed/return-multiple
     magnitude-typed/return-proc
@@ -197,6 +232,7 @@ exec guile -L . "$0"
     magnitude-typed/return-multiple->
     magnitude-typed/return-proc->
     magnitude-typed/return-lambda->
+    ;; define-typed* examples
     magnitude-typed*/no-return-check
     magnitude-typed*/no-return-check-by-missing-type
     magnitude-typed*/return
