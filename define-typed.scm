@@ -452,6 +452,40 @@
         body ...)
      (define-typed/compat define-typed/helper (procname args ...)
        (ret? types ...)
+       body ...))
+    ;; rest arguments without return value
+    ;; check for each rest element
+    ((_ (procname args ... . rest)
+        ;; using the cons symbol :: from ocaml / ML languages to separate the rest types
+        (types ... :: rest?)
+        body ...)
+     (define-typed/helper procname (args ... . rest)
+       (types ...)
+       (each-rest rest?)
+       call-and-check-return-type
+       #f
+       body ...))
+    ;; check all rest arguments with the rest?
+    ((_ (procname args ... . rest)
+        ;; using the cons symbol :: from ocaml / ML languages to separate the rest types
+        (types ... (:: rest?))
+        body ...)
+     (define-typed/helper procname (args ... . rest)
+       (types ...)
+       rest?
+       call-and-check-return-type
+       #f
+       body ...))
+    ;; check rest arguments with circular rest?
+    ((_ (procname args ... . rest)
+        ;; using the cons symbol :: from ocaml / ML languages to separate the rest types
+        (types ... (:: rest1? rest2? rest*? ...))
+        body ...)
+     (define-typed/helper procname (args ... . rest)
+       (types ...)
+       (circular-rest (list rest1? rest2? rest*? ...))
+       call-and-check-return-type
+       #f
        body ...))))
     ;; TODO add blocks for rest support without ret? Do not support
     ;; ret? types ... :: rest? for now, that’s already provided by
