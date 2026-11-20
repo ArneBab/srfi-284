@@ -6,7 +6,7 @@
 exec guile -L . "$0"
 ; !#
 
-(import (define-typed) (statprof))
+(import (define-typed) (statprof) (srfi :26))
 
 (define-inlinable (float? x)
   (and (real? x) (inexact? x)))
@@ -74,6 +74,13 @@ exec guile -L . "$0"
   (magnitude-typed/rest-two-alternating-ret-multiple-> a b . c) (float? float? (:: float? string?) (-> float? float?))
   (values 1.0 (sqrt (+ (* a a) (* b b)))))
 
+;; number range contract with rest arguments
+
+(define-typed
+  (magnitude-typed/number-range-contract a . b) ((cut = 3.0 <>) (:: (cut < 3.5 <> 5.5) string?) (-> (cut < 0.9 <> 1.1) float?))
+  (values 1.0 (sqrt (+ (* a a) (* (car b) (car b))))))
+
+(magnitude-typed/number-range-contract 3.0 4.0 "a" 4.2 "b")
 
 ;; return types
 
@@ -222,6 +229,8 @@ exec guile -L . "$0"
     magnitude-typed/rest-each-ret-multiple->
     magnitude-typed/rest-one-for-all-ret-multiple->
     magnitude-typed/rest-two-alternating-ret-multiple->
+    ;; full-blown contracts
+    magnitude-typed/number-range-contract
     ;; return check examples
     magnitude-typed/no-return-check-by-missing-type
     magnitude-typed/return-multiple
