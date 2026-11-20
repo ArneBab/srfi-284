@@ -489,7 +489,7 @@
        body ...))))
     ;; TODO add blocks for rest support without ret? Do not support
     ;; ret? types ... :: rest? for now, that’s already provided by
-    ;; :: rest? -> ret? ⇒ (types ... :: rest?) need not check for
+    ;; :: rest? ⇒ (types ... :: rest?) need not check for
     ;; a return type as long as rest? does not support ret? t ...
 
 (define-syntax lambda-typed
