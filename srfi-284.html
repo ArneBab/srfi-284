@@ -54,10 +54,11 @@ SPDX-License-Identifier: MIT
 
     <p>Type boundaries that support documentation make it easier to learn new APIs (<a href="https://pleiad.cl/papers/2014/hanenbergAl-emse2014.pdf">Hanenberg et al 2014</a>) and can enable more code validation at editing-time. This proposal is a simpler version of <a href="https://srfi.schemers.org/srfi-253/srfi-253.html">SRFI 253</a> (though its implementation predates SRFI 253), providing only procedure-level checks. It works well together with the checks for data defined in SRFI 253 and <a href="https://srfi.schemers.org/srfi-273/srfi-273.html">SRFI 273</a>.</p>
     <p>Different from <code>define-checked</code> in SRFI 253, <code>define-typed</code> does not interleave types with arguments, but provides them as second list after the arguments. This keeps the procedure arguments easier to grasp at a glance as long as they all fit on a single line, but becomes harder to understand when the procedure has more than a handful of arguments. Also the return type is defined as part of the procedure header to keep all type information in one place. But <code>define-checked</code> is clearly the better name.</p>
-    <p>The argument types and the return type are separated by <code>-></code>. This symbol was chosen because it is commonly used to give the return type in gradual typing systems like the ones in Python and Typescript. The implementation of <code>define-typed</code> actually started with purely structural type definition spearheaded by <a href="https://github.com/sph-mn/sph-sc#functions">sph-sc</a> (with the return type first, in the position of the procedure name), but that turned out to cause more errors due to misinterpreting return-types as argument types or the other way round.</p>
+    <p>The rest types are identified by <code>::</code>. This symbol is used instead of <code>.</code>, because the <code>.</code> would fail if the type is a form, e.g. a lambda. The symbol <code>::</code> is in use to mark rest types (and infix cons) in Ocaml and related languages.</p>
+    <p>The return types are identified by <code>-></code>. This symbol is commonly used to give the return type in gradual typing systems like the ones in Python and Typescript. The implementation of <code>define-typed</code> actually started with purely structural type definition spearheaded by <a href="https://github.com/sph-mn/sph-sc#functions">sph-sc</a> (with the return type first, in the position of the procedure name), but that turned out to cause more errors due to misinterpreting return-types as argument types or the other way round.</p>
     <p>The form <code>define-typed*</code> supports named and optional arguments, while <code>define-typed</code> only supports positional arguments, because supporting named and optional arguments incurs a cost in runtime and implementation complexity.</p>
     <p>Different from SRFI 253, this SRFI only provides two forms and no helpers, to minimize learning time. It is implemented purely in <code>syntax-rules</code> to improve portability, but the runtime introspection of the implementation (using procedure-properties) will require porting to be usable in other implementations, which is why it’s unspecified here.</p>
-    <p>To avoid conceptual and implementation complexity, there is no support for procedures with variable numbers of argument numbers (case-lambda).</p>
+    <p>To avoid conceptual and implementation complexity, there is no support for procedures with variable argument numbers (i.e. case-lambda).</p>
     <p>The implementation for Guile is as fast as manually added type guards at the start of the body as described in the article <a href="https://dthompson.us/posts/optimizing-guile-scheme.html">Optimizing Guile Scheme</a>. This makes <code>define-typed</code> an easier way to speed up hot inner loops, as long as the predicates give the compiler the needed information.</p>
 
 <h2 id="specification">Specification</h2>
@@ -75,17 +76,19 @@ SPDX-License-Identifier: MIT
 
     <pre><code>(define-typed (foo a) (number? -> string?)
   (number->string a))</code></pre>
-    <p>This second form holds predicate procedures. The predicates before the <code>-></code> are the checks for the arguments, the predicate after the <code>-></code> is the check for the return value. If the procedure returns multiple values or a single predicate should receive the return values as list, the return type specification must be in parentheses.</p>
+    <p>This second form holds predicate procedures (e.g. <code>number?</code>. The initial predicates are the checks for the arguments, after the <code>-></code> follows the check for the return value.</p>
 
     <h3 id="specification-define-typed">Specification: <code>define-typed</code></h3>
 
     <p>Formal structure: <code>(define-typed name-and-arguments types body)</code>.</p>
 
-    <p>There are three ways to call <code>define-typed</code>: only <em>argument types</em>, only <em>return type</em>, and <em>argument types</em> and <em>return types</em>.</p>
+    <p>The <code>types</code> in <code>define-typed</code> can contain three different groups of types: <em>argument types</em> (at the start), <em>rest types</em> (marked with <code>::</code>), and <em>return types</em> (marked with <code>-></code>).</p>
 
-    <p>Each <em>type</em> can be a predicate-procedure, a lambda form or another form that evaluates to a predicate, or <code>#f</code> (for “no type check”).</p>
+    <p>Each <em>type</em> can be a predicate-procedure, a form that evaluates to a predicate (like a <em>lambda</em> or srfi :26 <em>cut</em>), or <code>#f</code> (for “no type check”).</p>
 
     <p>The <em>argument types</em> must contain one <em>type</em> (as described above) per argument.</p>
+
+    <p>If the <em>arguments</em> contain a rest argument (<code>(name arg . rest)</code>), there can be <em>rest types</em>. They can be either a single predicate that each rest argument must match, for example <code>:: string?</code>, or a form with multiple predicates for a circular pattern of types, for example <code>(:: string? number?)</code> with alternating string and number elements, or a form with a single predicate that receives all rest values as list, for example <code>(:: all-string?)</code></p>
 
     <p>The <em>return types</em> can be either a single predicate for a single value, for example <code>-> string?</code>, a form with multiple predicates for multiple values, one per value, for example <code>(-> string? string?)</code>, or a form with a single predicate that receives all return values as list, for example <code>(-> all-string?)</code>.</p>
 
@@ -96,6 +99,10 @@ SPDX-License-Identifier: MIT
 (define-typed (foo a) (integer?)
   (number->string a))
 
+;; only type all rest arguments
+(define-typed (foo a . b) (:: integer?)
+  (map number->string b))
+
 ;; only type the return value
 (define-typed (foo a) (-> string?)
   (number->string a))
@@ -103,6 +110,10 @@ SPDX-License-Identifier: MIT
 ;; type argument and return value
 (define-typed (foo a) (integer? -> string?)
   (number->string a))
+
+;; type argument, rest arguments and return value
+(define-typed (foo a . b) (integer? :: integer? -> list?)
+  (cons (number->string a) (map number->string b)))
 
 ;; type the argument and two return values
 (define-typed (foo a) (integer? (-> string? integer?))
@@ -112,9 +123,20 @@ SPDX-License-Identifier: MIT
 (define (all-integer? val) (not (member #f (map integer? val))))
 (define-typed (foo a) (integer? (-> all-integer?))
   (values a a))
+
+;; type the list contents
+(define-typed (foo a . b) (-> (λ(x)(not (member #f (map string? x)))))
+  (map number->string b))
+
+;; use srfi :26 cut to cleanly represent number range checks
+(import (only (srfi :26) cut))
+(define-typed (foo a) ((cut <= 1 <> 1000) -> (cut <= 0 <> 3))
+  (log10 a))
+
+
     </code></pre>
 
-    <p>Procedures defined by <code>define-typed</code> shall call the predicate checks of their respective arguments or types before entering the procedure body must and raise errors if one or more predicates return <code>#f</code>. If return value predicates are defined, they shall run before the values are returned and likewise raise errors.</p>
+    <p>Procedures defined by <code>define-typed</code> shall call the predicate checks of their respective arguments or types before entering the procedure body and must raise errors if one or more predicates return <code>#f</code>. If return value predicates are defined, they shall run before the values are returned and likewise raise errors.</p>
 
     <p>The implementation should store argument type and return type information in a way that makes it easy to access with type introspections, i.e. as described in <a href="https://srfi.schemers.org/srfi-283/srfi-283.html">SRFI 283</a>.</p>
 
@@ -140,27 +162,38 @@ SPDX-License-Identifier: MIT
 &lt;define-typed> = (define-typed (&lt;name> &lt;arg> ...) &lt;types> &lt;body>)
 &lt;arg> = symbol
 &lt;name> = symbol
-&lt;types> = (&lt;argtype> ... -> &lt;rettype>)       ; 1: args with a single return type
-        | (&lt;argtype> ... (-> &lt;retlisttype>)) ; 2: args with multiple returns,
-                                             ;    checked with a single
-                                             ;    procedure that receives the
-                                             ;    return values as list
-        | (&lt;argtype> ... (-> &lt;rettype> &lt;rettype> &lt;rettype> ...)) ; 3: args with multiple returns
-        | (&lt;argtype> ...)                    ; 4: args only
-&lt;artype> = #f | symbol | &lt;predicate-form>
-&lt;rettype> = #f | symbol | &lt;predicate-form>
-&lt;retlisttype> = &lt;predicate-form> that receives a list with all return values
+&lt;types> = (&lt;argtypes>) | (&lt;resttypes>) | (&lt;rettypes>)
+        | (&lt;argtypes> &lt;resttypes>)
+        | (&lt;argtypes> &lt;rettypes>)
+        | (&lt;resttypes> &lt;rettypes>)
+        | (&lt;argtypes> &lt;resttypes> &lt;rettypes>)
+&lt;argtypes> = &lt;argtype> ...
+&lt;resttypes> = :: &lt;resttype> ; 1: simple return check
+        | (:: &lt;listtype>)      ; 2: all rest values,
+                                  ;    checked with a single
+                                  ;    procedure that receives the
+                                  ;    rest values as list
+        | (:: &lt;resttype> &lt;resttype> &lt;resttype> ...) ; 3: circular rest types
+&lt;rettypes> = -> &lt;rettype> ; 1: simple return check
+        | (-> &lt;listtype>)    ; 2: multiple returns,
+                                ;    checked with a single
+                                ;    procedure that receives the
+                                ;    return values as list
+        | (-> &lt;rettype> &lt;rettype> &lt;rettype> ...) ; 3: multiple return values
+&lt;artype> = &lt;type>
+&lt;resttype> = &lt;type>
+&lt;rettype> = &lt;type>
+&lt;type> = #f | symbol | &lt;predicate-form>
+&lt;listtype> = &lt;predicate-form> that receives a list with all return values
 &lt;predicate-form> = a form evaluating to a procedure with one argument that returns a true value or #f
 &lt;body> = as per R7RS section 4.1.4
 </code></pre>
 
     <h3 id="specification-define-typed-star">Specification: <code>define-typed*</code></h3>
 
-    <p>The form <code>define-typed*</code> works like the form <code>define-typed</code>, but it should support named and optional argument and must support rest arguments in the style provided by the implementation. The named and optional and rest arguments are typed using the same representation in which they are defined.</p>
+    <p>The form <code>define-typed*</code> works like the form <code>define-typed</code>, but it should support named, optional, and rest arguments in the style provided by the implementation. The named and optional and rest arguments are typed using the same representation in which they are defined. If it supports rest arguments, the rest type predicate must receive all rest arguments as list.</p>
 
     <p>This form does not yield portable code, because named and optional argument representation differ between implementations, but it provides a portable structure for named and optional arguments, using their implementation-specific representation.</p>
-
-    <p>Support for rest arguments is required (must) while named (keyword) and optional arguments are optional (should), because support for rest arguments is necessary to enable all possibilities of regular <code>define</code> and <code>labmda</code>.</p>
     <p>Examples for Guile:</p>
 
     <pre><code>
