@@ -63,12 +63,13 @@
 
 ;; inlinable add-properties!, because guild compile -W3 define-typed.scm
 ;; marks it as possibly unused otherwise.
-(define-inlinable (add-properties! proc name from-proc ret? types)
+(define-inlinable (add-properties! proc name from-proc ret? rest? types)
   ;; add procedure properties via an inner procedure
   (set-procedure-properties! proc (procedure-properties from-proc))
   ;; record the types
   (set-procedure-property! proc 'return-types ret?)
   (set-procedure-property! proc 'argument-types types)
+  (set-procedure-property! proc 'rest-types rest?)
   ;; preserve the name
   (set-procedure-property! proc 'name name))
 
@@ -136,7 +137,7 @@
              (properties-helper (lamb (args ...) body ...)))
          ;; add properties to the defined procedure
          (add-properties! proc #f properties-helper
-                          ret-values (list types ...))
+                          ret-values #f (list types ...))
          proc)))
     ((_ #f ;; no name
         (args ... . rest) (types ...)
@@ -153,7 +154,7 @@
              (properties-helper (lamb (args ...) body ...)))
          ;; add properties to the defined procedure
          (add-properties! proc #f properties-helper
-                          ret-values (list types ...))
+                          ret-values rest? (list types ...))
          proc)))
     ((_ procname ;; with name
         (args ...) (types ...) ;; no rest argument
@@ -170,7 +171,7 @@
        (let ((properties-helper (lamb (args ...) body ...)))
          ;; add properties to the defined procedure
          (add-properties! procname (and procname 'procname) properties-helper
-                          ret-values (list types ...)))))
+                          ret-values #f (list types ...)))))
     ((_ procname ;; with name
         (args ... . rest) (types ...) ;; with rest argument
         rest? ret-proc ret-values
@@ -186,7 +187,7 @@
        (let ((properties-helper (lamb (args ... . rest) body ...)))
          ;; add properties to the defined procedure
          (add-properties! procname (and procname 'procname) properties-helper
-                          ret-values (list types ...)))))))
+                          ret-values rest? (list types ...)))))))
 
 ;; helper without keyword support
 (define-syntax define-typed/helper
@@ -291,20 +292,27 @@
         body ...))))
 
 (define-syntax-rule (each-rest predicate)
-  (lambda (args)
-    (let loop ((args args))
-      (cond ((null? args) #t)
-            ((predicate (car args))
-             (loop (cdr args)))
-            (else #f)))))
+  (let ((each-rest (lambda (args)
+                      (let loop ((args args))
+                        (cond ((null? args) #t)
+                              ((predicate (car args))
+                               (loop (cdr args)))
+                              (else #f))))))
+    (set-procedure-property! each-rest 'kind 'each-rest)
+    (set-procedure-property! each-rest 'value predicate)
+    each-rest))
 
 (define-syntax-rule (circular-rest predicates)
-  (lambda (args)
-    (let loop ((preds predicates) (args args))
-      (cond ((null? args) #t)
-            ((null? preds) (loop predicates args)) ;; circular
-            ((not ((car preds) (car args))) #f)
-            (else (loop (cdr preds) (cdr args)))))))
+  (let ((circular-rest  (lambda (args)
+                          (let loop ((preds predicates) (args args))
+                            (cond ((null? args) #t)
+                                  ((null? preds) (loop predicates args)) ;; circular
+                                  ((not ((car preds) (car args))) #f)
+                                  (else (loop (cdr preds) (cdr args))))))))
+    (set-procedure-property! circular-rest 'kind 'circular-rest)
+    (set-procedure-property! circular-rest 'value predicates)
+    circular-rest))
+
 
 ;; Define a procedure with typechecks.
 (define-syntax define-typed
