@@ -77,7 +77,10 @@ SPDX-License-Identifier: MIT
 
     <pre><code>(define-typed (foo a) (number? -> string?)
   (number->string a))</code></pre>
-    <p>This second form holds predicate procedures (e.g. <code>number?</code>. The initial predicates are the checks for the arguments, after the <code>-></code> follows the check for the return value.</p>
+    <p>This second form holds predicate procedures (e.g. <code>number?</code>. The initial predicates are the checks for the arguments, after the <code>-></code> follows the check for the return value. Rest arguments can by typed by marking their start with <code>::</code></p>
+
+    <pre><code>(define-typed (foo a . rest) (number? :: number? -> string?)
+  (string-join (cons (number->string a) (map number->string rest))))</code></pre>
 
     <h3 id="specification-define-typed">Specification: <code>define-typed</code></h3>
 
@@ -148,11 +151,44 @@ SPDX-License-Identifier: MIT
 (foo 5) ;; => "return value"
 (procedure-documentation foo) ;; => "docstring"
 (procedure-properties foo)
-;; => ((argument-types #&lt;procedure integer? (_)>)
+;; => ((rest-types . #f)
+;;     (argument-types #&lt;procedure integer? (_)>)
 ;;     (return-types . #&lt;procedure string? (_)>)
 ;;     (name . foo)
 ;;     (documentation . "docstring")
 ;;     (prop val))
+    </code></pre>
+
+    <p>The introspection provided enables verifying arguments before executing the procedure. When an editor has an attached REPL, this enables executing the type-checks of arguments for a procedure during editing. A Guile-specific example:</p>
+
+    <pre><code>
+;; procedure definition
+(define-typed (foo a b . c) (integer? integer? :: integer? -> list?)
+  (cons (number->string a) (map number->string c)))
+
+;; retrieve rest type definitions
+(define (validate-rest-argument proc arg pos)
+  (define prop (procedure-properties foo))
+  (define rest-types (and=> (assoc 'rest-types prop) cdr))
+  (define rest-kind (procedure-property rest-types 'kind))
+  (define rest-value (procedure-property rest-types 'value))
+  (cond ((equal? 'each-rest rest-kind)
+         (rest-value arg))
+        ((equal? 'circular-rest rest-kind)
+         ((list-ref rest-value (modulo pos (length rest-value))) arg))
+        (else (rest-types (list arg)))))
+;; valid first rest argument
+(validate-rest-argument foo 5 0)
+;; => #t
+;; invalid third rest argument
+(validate-rest-argument foo "5" 3)
+;; => #f
+;; available type properties
+(procedure-properties foo)
+;; => ((rest-types . #<procedure each-rest (args)>)
+;;     (argument-types #<procedure integer? (_)> #<procedure integer? (_)>)
+;;     (return-types . #<procedure list? (_)>)
+;;     (name . foo))
     </code></pre>
 
     <h3 id="specification-define-typed-grammar">Specification: <code>define-typed</code> grammar</h3>
