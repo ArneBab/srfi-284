@@ -51,6 +51,22 @@ exec guile -L . "$0"
   (sqrt (+ (* a a) (* b b))))
 
 (define-typed
+  (magnitude-typed/rest-each-untyped-arg-no-return a . c) (:: float?)
+  (sqrt (apply + c)))
+
+(define-typed
+  (magnitude-typed/rest-each-only-no-return . c) (:: float?)
+  (sqrt (apply + c)))
+
+(define-typed
+  (magnitude-typed/rest-one-for-all-only-no-return . c) ((:: all-float?))
+  (sqrt (apply + c)))
+
+(define-typed ;; alternating rest, but the same predicate, to match the call
+  (magnitude-typed/rest-two-alternating-only-no-return . c) ((:: float? float?))
+  (sqrt (apply + c)))
+
+(define-typed
   (magnitude-typed/rest-each a b . c) (float? float? :: float? -> float?)
   (sqrt (+ (* a a) (* b b))))
 
@@ -238,6 +254,10 @@ exec guile -L . "$0"
     magnitude-typed/rest-each-no-return
     magnitude-typed/rest-one-for-all-no-return
     magnitude-typed/rest-two-alternating-no-return
+    magnitude-typed/rest-each-untyped-arg-no-return
+    magnitude-typed/rest-each-only-no-return
+    magnitude-typed/rest-one-for-all-only-no-return
+    magnitude-typed/rest-two-alternating-only-no-return
     magnitude-typed/rest-each-ret-proc->
     magnitude-typed/rest-one-for-all-ret-proc->
     magnitude-typed/rest-two-alternating-ret-proc->

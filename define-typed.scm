@@ -108,13 +108,14 @@
         body ...)
      (begin
        (check-argument-and-type-count
-        (quote (args ... rest)) (quote (types ... rest?)))
+        (quote (args ...)) (quote (types ...)))
        (lamb (args ... . rest)
              ;; create a sub-procedure to run after typecheck
              (def inner (lamb () body ...))
              ;; typecheck the arguments
-             (check (types ... rest?)
-                    (args ... rest))
+             (check (types ...) (args ...))
+             ;; and the rest argument
+             (check (rest?) (rest))
              ;; get and check the result
              (ret-proc inner ret-values))))))
 
