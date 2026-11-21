@@ -130,7 +130,7 @@ SPDX-License-Identifier: MIT
 
 ;; use srfi :26 cut to cleanly represent number range checks
 (import (only (srfi :26) cut))
-(define-typed (foo a) ((cut <= 1 <> 1000) -> (cut <= 0 <> 3))
+(define-typed (foo a) ((cut &lt;= 1 &lt;&gt; 1000) -&gt; (cut &lt;= 0 &lt;&gt; 3))
   (log10 a))
 
 
