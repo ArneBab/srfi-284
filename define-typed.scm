@@ -310,42 +310,8 @@
 (define-syntax define-typed
   (syntax-rules (-> ::)
     ;; syntax with -> ret
-    ;; single -> checker: check all returned values via procedure
-    ((_ (procname args ...)
-        (types ... (-> ret?))
-        body ...)
-     (define-typed (procname args ...)
-       ((-> ret?) types ...)
-        body ...))
-    ;; two or more return checkers: one per value (fixed number of
-    ;; return values!)
-    ((_ (procname args ...)
-        (types ... (-> ret1? ret2* ret*? ...))
-        body ...)
-     (define-typed (procname args ...)
-       ((-> ret1? ret2* ret*? ...) types ...)
-       body ...))
-    ;; alternate single return value syntax with -> ret
-    ((_ (procname args ...)
-        (types ... -> ret?)
-        body ...)
-     (define-typed/helper procname (args ...)
-       (types ...)
-       #f ;; no rest arguments
-       call-and-check-return-type
-       ret?
-       body ...))
-    ;; alternate single return value syntax with rest argument and -> ret
-    ((_ (procname args ... . rest)
-        (types ... -> ret?)
-        body ...)
-     (define-typed/helper procname (args ... . rest)
-       (types ...)
-       #f ;; no rest arguments
-       call-and-check-return-type
-       ret?
-       body ...))
-    ;; alternate single return value syntax without ret?
+    ;; rest arguments without return value
+    ;; check for each rest element
     ((_ (procname args ... . rest)
         ;; using the cons symbol :: from ocaml / ML languages to separate the rest types
         (types ... :: rest?)
@@ -356,7 +322,7 @@
        call-and-check-return-type
        #f
        body ...))
-    ;; alternate single return value syntax with -> ret and check all rest arguments with the rest?
+    ;; check all rest arguments with the rest?
     ((_ (procname args ... . rest)
         ;; using the cons symbol :: from ocaml / ML languages to separate the rest types
         (types ... (:: rest?))
@@ -367,27 +333,49 @@
        call-and-check-return-type
        #f
        body ...))
-    ;; alternate single return value syntax with -> ret and check for each rest element
+    ;; check rest arguments with circular rest?
     ((_ (procname args ... . rest)
         ;; using the cons symbol :: from ocaml / ML languages to separate the rest types
-        (types ... :: rest?)
+        (types ... (:: rest1? rest2? rest*? ...))
+        body ...)
+     (define-typed/helper procname (args ... . rest)
+       (types ...)
+       (circular-rest (list rest1? rest2? rest*? ...))
+       call-and-check-return-type
+       #f
+       body ...))
+    ;; each rest argument with single return value
+    ((_ (procname args ... . rest)
+        ;; using the cons symbol :: from ocaml / ML languages to separate the rest types
+        (types ... :: rest? -> ret?)
         body ...)
      (define-typed/helper procname (args ... . rest)
        (types ...)
        (each-rest rest?)
        call-and-check-return-type
-       #f
+       ret?
        body ...))
-    ;; alternate single return value syntax with -> ret and check all rest arguments with the rest?
+    ;; alternate single return value syntax with -> ret and check rest arguments with one proc
     ((_ (procname args ... . rest)
         ;; using the cons symbol :: from ocaml / ML languages to separate the rest types
-        (types ... (:: rest?))
+        (types ... (:: rest?) -> ret?)
         body ...)
      (define-typed/helper procname (args ... . rest)
        (types ...)
        rest?
        call-and-check-return-type
-       #f
+       ret?
+       body ...))
+    ;; alternate single return value syntax with -> ret and check rest arguments with circular rest?
+    ((_ (procname args ... . rest)
+        ;; using the cons symbol :: from ocaml / ML languages to separate the rest types
+        (types ... (:: rest1? rest2? rest*? ...) -> ret?)
+        body ...)
+     (define-typed/helper procname (args ... . rest)
+       (types ...)
+       (circular-rest (list rest1? rest2? rest*? ...))
+       call-and-check-return-type
+       ret?
        body ...))
     ;; alternate single return value syntax with -> ret and check rest arguments with circular rest?
     ((_ (procname args ... . rest)
@@ -438,6 +426,41 @@
        call-and-check-return-type/proc
        ret?
        body ...))
+    ;; single return value syntax with -> ret
+    ((_ (procname args ...)
+        (types ... -> ret?)
+        body ...)
+     (define-typed/helper procname (args ...)
+       (types ...)
+       #f ;; no rest arguments
+       call-and-check-return-type
+       ret?
+       body ...))
+    ;; single -> checker: check all returned values via procedure
+    ((_ (procname args ...)
+        (types ... (-> ret?))
+        body ...)
+     (define-typed (procname args ...)
+       ((-> ret?) types ...)
+        body ...))
+    ;; two or more return checkers: one per value (fixed number of
+    ;; return values!)
+    ((_ (procname args ...)
+        (types ... (-> ret1? ret2* ret*? ...))
+        body ...)
+     (define-typed (procname args ...)
+       ((-> ret1? ret2* ret*? ...) types ...)
+       body ...))
+    ;; alternate single return value syntax with rest argument and -> ret
+    ((_ (procname args ... . rest)
+        (types ... -> ret?)
+        body ...)
+     (define-typed/helper procname (args ... . rest)
+       (types ...)
+       #f ;; no rest argument check
+       call-and-check-return-type
+       ret?
+       body ...))
     ;; two or more return checkers: one per value (fixed number of
     ;; return values!)
     ((_ (procname args ...)
@@ -486,40 +509,7 @@
      (define-typed/compat define-typed/helper (procname args ...)
        (ret? types ...)
        body ...))
-    ;; rest arguments without return value
-    ;; check for each rest element
-    ((_ (procname args ... . rest)
-        ;; using the cons symbol :: from ocaml / ML languages to separate the rest types
-        (types ... :: rest?)
-        body ...)
-     (define-typed/helper procname (args ... . rest)
-       (types ...)
-       (each-rest rest?)
-       call-and-check-return-type
-       #f
-       body ...))
-    ;; check all rest arguments with the rest?
-    ((_ (procname args ... . rest)
-        ;; using the cons symbol :: from ocaml / ML languages to separate the rest types
-        (types ... (:: rest?))
-        body ...)
-     (define-typed/helper procname (args ... . rest)
-       (types ...)
-       rest?
-       call-and-check-return-type
-       #f
-       body ...))
-    ;; check rest arguments with circular rest?
-    ((_ (procname args ... . rest)
-        ;; using the cons symbol :: from ocaml / ML languages to separate the rest types
-        (types ... (:: rest1? rest2? rest*? ...))
-        body ...)
-     (define-typed/helper procname (args ... . rest)
-       (types ...)
-       (circular-rest (list rest1? rest2? rest*? ...))
-       call-and-check-return-type
-       #f
-       body ...))))
+    ))
     ;; TODO add blocks for rest support without ret? Do not support
     ;; ret? types ... :: rest? for now, that’s already provided by
     ;; :: rest? ⇒ (types ... :: rest?) need not check for
