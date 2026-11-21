@@ -335,27 +335,59 @@
        call-and-check-return-type
        ret?
        body ...))
-    ;; alternate single return value syntax with -> ret and check for each rest element
+    ;; alternate single return value syntax with rest argument and -> ret
+    ((_ (procname args ... . rest)
+        (types ... -> ret?)
+        body ...)
+     (define-typed/helper procname (args ... . rest)
+       (types ...)
+       #f ;; no rest arguments
+       call-and-check-return-type
+       ret?
+       body ...))
+    ;; alternate single return value syntax without ret?
     ((_ (procname args ... . rest)
         ;; using the cons symbol :: from ocaml / ML languages to separate the rest types
-        (types ... :: rest? -> ret?)
+        (types ... :: rest?)
         body ...)
      (define-typed/helper procname (args ... . rest)
        (types ...)
        (each-rest rest?)
        call-and-check-return-type
-       ret?
+       #f
        body ...))
     ;; alternate single return value syntax with -> ret and check all rest arguments with the rest?
     ((_ (procname args ... . rest)
         ;; using the cons symbol :: from ocaml / ML languages to separate the rest types
-        (types ... (:: rest?) -> ret?)
+        (types ... (:: rest?))
         body ...)
      (define-typed/helper procname (args ... . rest)
        (types ...)
        rest?
        call-and-check-return-type
-       ret?
+       #f
+       body ...))
+    ;; alternate single return value syntax with -> ret and check for each rest element
+    ((_ (procname args ... . rest)
+        ;; using the cons symbol :: from ocaml / ML languages to separate the rest types
+        (types ... :: rest?)
+        body ...)
+     (define-typed/helper procname (args ... . rest)
+       (types ...)
+       (each-rest rest?)
+       call-and-check-return-type
+       #f
+       body ...))
+    ;; alternate single return value syntax with -> ret and check all rest arguments with the rest?
+    ((_ (procname args ... . rest)
+        ;; using the cons symbol :: from ocaml / ML languages to separate the rest types
+        (types ... (:: rest?))
+        body ...)
+     (define-typed/helper procname (args ... . rest)
+       (types ...)
+       rest?
+       call-and-check-return-type
+       #f
        body ...))
     ;; alternate single return value syntax with -> ret and check rest arguments with circular rest?
     ((_ (procname args ... . rest)
