@@ -6,12 +6,16 @@
 exec guile -L . "$0"
 ; !#
 
-(import (define-typed) (statprof))
+(import (define-typed) (statprof) (srfi :26))
 
 (define-inlinable (float? x)
   (and (real? x) (inexact? x)))
 (define-inlinable (all-float? args)
-  (not (member #f (map float? args))))
+  (let loop ((args args))
+    (cond ((null? args) #t)
+          ((float? (car args))
+           (loop (cdr args)))
+          (else #f))))
 
 (define (magnitude x y) (sqrt (+ (* x x) (* y y))))
 (define (magnitude-handtyped x y)
@@ -33,6 +37,80 @@ exec guile -L . "$0"
   (magnitude-typed/return x y)
   (float? float? float?)
   (sqrt (+ (* x x) (* y y))))
+
+(define-typed
+  (magnitude-typed/rest-each-no-return a b . c) (float? float? :: float?)
+  (sqrt (+ (* a a) (* b b))))
+
+(define-typed
+  (magnitude-typed/rest-one-for-all-no-return a b . c) (float? float? (:: all-float?))
+  (sqrt (+ (* a a) (* b b))))
+
+(define-typed
+  (magnitude-typed/rest-two-alternating-no-return a b . c) (float? float? (:: float? string?))
+  (sqrt (+ (* a a) (* b b))))
+
+(define-typed
+  (magnitude-typed/rest-each-untyped-arg-no-return a . c) (:: float?)
+  (sqrt (apply + c)))
+
+(define-typed
+  (magnitude-typed/rest-each-only-no-return . c) (:: float?)
+  (sqrt (apply + c)))
+
+(define-typed
+  (magnitude-typed/rest-one-for-all-only-no-return . c) ((:: all-float?))
+  (sqrt (apply + c)))
+
+(define-typed ;; alternating rest, but the same predicate, to match the call
+  (magnitude-typed/rest-two-alternating-only-no-return . c) ((:: float? float?))
+  (sqrt (apply + c)))
+
+(define-typed
+  (magnitude-typed/rest-each a b . c) (float? float? :: float? -> float?)
+  (sqrt (+ (* a a) (* b b))))
+
+(define-typed
+  (magnitude-typed/rest-one-for-all a b . c) (float? float? (:: all-float?) -> float?)
+  (sqrt (+ (* a a) (* b b))))
+
+(define-typed
+  (magnitude-typed/rest-two-alternating a b . c) (float? float? (:: float? string?) -> float?)
+  (sqrt (+ (* a a) (* b b))))
+
+(define-typed
+  (magnitude-typed/rest-each-ret-proc-> a b . c) (float? float? :: float? (-> all-float?))
+  (sqrt (+ (* a a) (* b b))))
+
+(define-typed
+  (magnitude-typed/rest-one-for-all-ret-proc-> a b . c) (float? float? (:: all-float?) (-> all-float?))
+  (sqrt (+ (* a a) (* b b))))
+
+(define-typed
+  (magnitude-typed/rest-two-alternating-ret-proc-> a b . c) (float? float? (:: float? string?) (-> all-float?))
+  (sqrt (+ (* a a) (* b b))))
+
+(define-typed
+  (magnitude-typed/rest-each-ret-multiple-> a b . c) (float? float? :: float? (-> float? float?))
+  (values 1.0 (sqrt (+ (* a a) (* b b)))))
+
+(define-typed
+  (magnitude-typed/rest-one-for-all-ret-multiple-> a b . c) (float? float? (:: all-float?) (-> float? float?))
+  (values 1.0 (sqrt (+ (* a a) (* b b)))))
+
+(define-typed
+  (magnitude-typed/rest-two-alternating-ret-multiple-> a b . c) (float? float? (:: float? string?) (-> float? float?))
+  (values 1.0 (sqrt (+ (* a a) (* b b)))))
+
+;; number range contract with rest arguments
+
+(define-typed
+  (magnitude-typed/number-range-contract a . b) ((cut = 3.0 <>) (:: (cut < 3.5 <> 5.5) string?) (-> (cut < 0.9 <> 1.1) float?))
+  (values 1.0 (sqrt (+ (* a a) (* (car b) (car b))))))
+
+(magnitude-typed/number-range-contract 3.0 4.0 "a" 4.2 "b")
+
+;; return types
 
 (define-typed
   (magnitude-typed/return-multiple x y)
@@ -168,8 +246,28 @@ exec guile -L . "$0"
     magnitude
     magnitude-handtyped
     magnitude-typed/no-return-check
-    magnitude-typed/no-return-check-by-missing-type
     magnitude-typed/return
+    ;; rest argument examples
+    magnitude-typed/rest-each
+    magnitude-typed/rest-one-for-all
+    magnitude-typed/rest-two-alternating
+    magnitude-typed/rest-each-no-return
+    magnitude-typed/rest-one-for-all-no-return
+    magnitude-typed/rest-two-alternating-no-return
+    magnitude-typed/rest-each-untyped-arg-no-return
+    magnitude-typed/rest-each-only-no-return
+    magnitude-typed/rest-one-for-all-only-no-return
+    magnitude-typed/rest-two-alternating-only-no-return
+    magnitude-typed/rest-each-ret-proc->
+    magnitude-typed/rest-one-for-all-ret-proc->
+    magnitude-typed/rest-two-alternating-ret-proc->
+    magnitude-typed/rest-each-ret-multiple->
+    magnitude-typed/rest-one-for-all-ret-multiple->
+    magnitude-typed/rest-two-alternating-ret-multiple->
+    ;; full-blown contracts
+    magnitude-typed/number-range-contract
+    ;; return check examples
+    magnitude-typed/no-return-check-by-missing-type
     magnitude-typed/return-multiple
     magnitude-typed/return-proc
     magnitude-typed/return-lambda
@@ -178,6 +276,7 @@ exec guile -L . "$0"
     magnitude-typed/return-multiple->
     magnitude-typed/return-proc->
     magnitude-typed/return-lambda->
+    ;; define-typed* examples
     magnitude-typed*/no-return-check
     magnitude-typed*/no-return-check-by-missing-type
     magnitude-typed*/return

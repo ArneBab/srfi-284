@@ -2,20 +2,22 @@
 ;
 ; SPDX-License-Identifier: MIT
 
-(define-module (define-typed) #:export (define-typed lambda-typed define-typed* lambda-typed*))
-
-(import (srfi :11 let-values))
+(define-module (define-typed)
+  #:export (define-typed lambda-typed define-typed* lambda-typed*)
+  #:use-module (srfi srfi-11)
+  #:re-export (let-values))
 
 ;; common procedures
 (define-inlinable (takes-single-value? proc)
   (equal? '(1 0 #f) (procedure-minimum-arity proc)))
 
-(define (call-and-check-return-type proc ret?)
+(define-syntax-rule (call-and-check-return-type proc ret?)
   (if ret? ;; #f means: do not check
       ;; get the result
       (let ((res (proc)))
         ;; typecheck the result
         ;; TODO report a bug in Guile that this causes trouble with => in cond when using define-inlinable
+        ;; TODO can no longer reproduce this problem.
         (unless (ret? res)
           (error "type error: return value ~a does not match ~a"
                  res ret?))
@@ -23,7 +25,7 @@
         res)
       (proc)))
 
-(define
+(define-syntax-rule
   (call-and-check-return-type/proc proc check-values)
   ;; get the result
   (let-values ((res (proc)))
@@ -33,7 +35,7 @@
              res check-values))
     ;; return the result
     (apply values res)))
-(define
+(define-syntax-rule
   (call-and-check-return-type/multiple proc return-checkers)
   ;; get the result
   (let-values ((res (proc)))
@@ -47,7 +49,7 @@
     ;; return the result
     (apply values res)))
 
-(define (check-argument-and-type-count args types)
+(define-syntax-rule (check-argument-and-type-count args types)
   (unless (null? types) ;; allow untyped args with return type check
     (let loop ((a args) (t types))
       (unless (equal? (pair? a) (pair? t))
@@ -59,7 +61,9 @@
       (when (pair? a)
         (loop (cdr a) (cdr t))))))
 
-(define (add-properties! proc name from-proc ret? types)
+;; inlinable add-properties!, because guild compile -W3 define-typed.scm
+;; marks it as possibly unused otherwise.
+(define-inlinable (add-properties! proc name from-proc ret? types)
   ;; add procedure properties via an inner procedure
   (set-procedure-properties! proc (procedure-properties from-proc))
   ;; record the types
@@ -82,34 +86,51 @@
     ((_ () (arguments ...)) #f))) ;; untyped arguments are legal when there’s a return type
 
 
-(define-syntax-rule (typed/base
-                      (args ...) (types ...)
-                      ret-proc ret-values
-                      def lamb check ;; define or define*, ...
-                      body ...)
-  (begin
-    (check-argument-and-type-count
-     (quote (args ...)) (quote (types ...)))
-    (lamb (args ...)
-      ;; create a sub-procedure to run after typecheck
-      (def inner (lamb () body ...))
-      ;; typecheck the arguments
-      (check (types ...) (args ...))
-      ;; get and check the result
-      (ret-proc inner ret-values))))
+(define-syntax typed/base
+  (syntax-rules ()
+    ((_ (args ...) (types ...)
+        #f ret-proc ret-values
+        def lamb check ;; define or define*, ...
+        body ...)
+     (begin
+       (check-argument-and-type-count
+        (quote (args ...)) (quote (types ...)))
+       (lamb (args ...)
+             ;; create a sub-procedure to run after typecheck
+             (def inner (lamb () body ...))
+             ;; typecheck the arguments
+             (check (types ...) (args ...))
+             ;; get and check the result
+             (ret-proc inner ret-values))))
+    ((_ (args ... . rest) (types ...)
+        rest? ret-proc ret-values
+        def lamb check ;; define or define*, ...
+        body ...)
+     (begin
+       (check-argument-and-type-count
+        (quote (args ...)) (quote (types ...)))
+       (lamb (args ... . rest)
+             ;; create a sub-procedure to run after typecheck
+             (def inner (lamb () body ...))
+             ;; typecheck the arguments
+             (check (types ...) (args ...))
+             ;; and the rest argument
+             (check (rest?) (rest))
+             ;; get and check the result
+             (ret-proc inner ret-values))))))
 
 (define-syntax define-typed/base
   (syntax-rules ()
-    ((_ #f
+    ((_ #f ;; no name
         (args ...) (types ...)
-        ret-proc ret-values
+        #f ret-proc ret-values
         def lamb check ;; define or define*, ...
         body ...)
      (begin
        (let ((proc
               (typed/base
                (args ...) (types ...)
-               ret-proc ret-values
+               #f ret-proc ret-values
                def lamb check ;; define or define*, ...
                body ...))
              (properties-helper (lamb (args ...) body ...)))
@@ -117,33 +138,78 @@
          (add-properties! proc #f properties-helper
                           ret-values (list types ...))
          proc)))
-    ((_ procname
-        (args ...) (types ...)
-        ret-proc ret-values
+    ((_ #f ;; no name
+        (args ... . rest) (types ...)
+        rest? ret-proc ret-values
+        def lamb check ;; define or define*, ...
+        body ...)
+     (begin
+       (let ((proc
+              (typed/base
+               (args ...) (types ...)
+               rest? ret-proc ret-values
+               def lamb check ;; define or define*, ...
+               body ...))
+             (properties-helper (lamb (args ...) body ...)))
+         ;; add properties to the defined procedure
+         (add-properties! proc #f properties-helper
+                          ret-values (list types ...))
+         proc)))
+    ((_ procname ;; with name
+        (args ...) (types ...) ;; no rest argument
+        #f ret-proc ret-values
         def lamb check ;; define or define*, ...
         body ...)
      (begin
        (def procname
             (typed/base
              (args ...) (types ...)
-             ret-proc ret-values
+             #f ret-proc ret-values
              def lamb check ;; define or define*, ...
              body ...))
        (let ((properties-helper (lamb (args ...) body ...)))
          ;; add properties to the defined procedure
          (add-properties! procname (and procname 'procname) properties-helper
+                          ret-values (list types ...)))))
+    ((_ procname ;; with name
+        (args ... . rest) (types ...) ;; with rest argument
+        rest? ret-proc ret-values
+        def lamb check ;; define or define*, ...
+        body ...)
+     (begin
+       (def procname
+            (typed/base
+             (args ... . rest) (types ...)
+             rest? ret-proc ret-values
+             def lamb check ;; define or define*, ...
+             body ...))
+       (let ((properties-helper (lamb (args ... . rest) body ...)))
+         ;; add properties to the defined procedure
+         (add-properties! procname (and procname 'procname) properties-helper
                           ret-values (list types ...)))))))
 
 ;; helper without keyword support
-(define-syntax-rule (define-typed/helper procname
-                      (args ...) (types ...)
-                      ret-proc ret-values
-                      body ...)
-  (define-typed/base procname
-    (args ...) (types ...)
-    ret-proc ret-values
-    define lambda check-types ;; without keywords
-    body ...))
+(define-syntax define-typed/helper
+  (syntax-rules ()
+    ((_ procname
+        (args ...) (types ...)
+        #f ret-proc ret-values
+        body ...)
+     (define-typed/base procname
+       (args ...) (types ...)
+       #f ret-proc ret-values
+       define lambda check-types ;; without keywords
+       body ...))
+    ;; with rest arguments
+    ((_ procname
+        (args ... . rest) (types ...)
+        rest? ret-proc ret-values
+        body ...)
+     (define-typed/base procname
+       (args ... . rest) (types ...)
+       rest? ret-proc ret-values
+       define lambda check-types ;; without keywords
+       body ...))))
 
 ;; helper to distinguish between first type being ret? and first type
 ;; being first argument
@@ -153,9 +219,10 @@
         (ret? copied-> t ... reversed-> ())
         body ...)
      (helper procname (a ...) (t ...)
-       call-and-check-return-type
-       ret?
-       body ...))
+             #f
+             call-and-check-return-type
+             ret?
+             body ...))
     ;; transfer one argument and type each from reversed to copied; if
     ;; len args = len types, ret? is a return type check
     ((_ helper (procname copied-> a ... reversed-> (aa aa* ...))
@@ -223,11 +290,25 @@
        (ret? copied-> reversed-> ())
         body ...))))
 
+(define-syntax-rule (each-rest predicate)
+  (lambda (args)
+    (let loop ((args args))
+      (cond ((null? args) #t)
+            ((predicate (car args))
+             (loop (cdr args)))
+            (else #f)))))
 
+(define-syntax-rule (circular-rest predicates)
+  (lambda (args)
+    (let loop ((preds predicates) (args args))
+      (cond ((null? args) #t)
+            ((null? preds) (loop predicates args)) ;; circular
+            ((not ((car preds) (car args))) #f)
+            (else (loop (cdr preds) (cdr args)))))))
 
 ;; Define a procedure with typechecks.
 (define-syntax define-typed
-  (syntax-rules (->)
+  (syntax-rules (-> ::)
     ;; syntax with -> ret
     ;; single -> checker: check all returned values via procedure
     ((_ (procname args ...)
@@ -250,6 +331,72 @@
         body ...)
      (define-typed/helper procname (args ...)
        (types ...)
+       #f ;; no rest arguments
+       call-and-check-return-type
+       ret?
+       body ...))
+    ;; alternate single return value syntax with rest argument and -> ret
+    ((_ (procname args ... . rest)
+        (types ... -> ret?)
+        body ...)
+     (define-typed/helper procname (args ... . rest)
+       (types ...)
+       #f ;; no rest arguments
+       call-and-check-return-type
+       ret?
+       body ...))
+    ;; alternate single return value syntax without ret?
+    ((_ (procname args ... . rest)
+        ;; using the cons symbol :: from ocaml / ML languages to separate the rest types
+        (types ... :: rest?)
+        body ...)
+     (define-typed/helper procname (args ... . rest)
+       (types ...)
+       (each-rest rest?)
+       call-and-check-return-type
+       #f
+       body ...))
+    ;; alternate single return value syntax with -> ret and check all rest arguments with the rest?
+    ((_ (procname args ... . rest)
+        ;; using the cons symbol :: from ocaml / ML languages to separate the rest types
+        (types ... (:: rest?))
+        body ...)
+     (define-typed/helper procname (args ... . rest)
+       (types ...)
+       rest?
+       call-and-check-return-type
+       #f
+       body ...))
+    ;; alternate single return value syntax with -> ret and check for each rest element
+    ((_ (procname args ... . rest)
+        ;; using the cons symbol :: from ocaml / ML languages to separate the rest types
+        (types ... :: rest?)
+        body ...)
+     (define-typed/helper procname (args ... . rest)
+       (types ...)
+       (each-rest rest?)
+       call-and-check-return-type
+       #f
+       body ...))
+    ;; alternate single return value syntax with -> ret and check all rest arguments with the rest?
+    ((_ (procname args ... . rest)
+        ;; using the cons symbol :: from ocaml / ML languages to separate the rest types
+        (types ... (:: rest?))
+        body ...)
+     (define-typed/helper procname (args ... . rest)
+       (types ...)
+       rest?
+       call-and-check-return-type
+       #f
+       body ...))
+    ;; alternate single return value syntax with -> ret and check rest arguments with circular rest?
+    ((_ (procname args ... . rest)
+        ;; using the cons symbol :: from ocaml / ML languages to separate the rest types
+        (types ... (:: rest1? rest2? rest*? ...) -> ret?)
+        body ...)
+     (define-typed/helper procname (args ... . rest)
+       (types ...)
+       (circular-rest (list rest1? rest2? rest*? ...))
        call-and-check-return-type
        ret?
        body ...))
@@ -259,29 +406,77 @@
         body ...)
      (define-typed/helper procname (args ...)
        (types ...)
+       #f
+       call-and-check-return-type/proc
+       ret?
+       body ...))
+    ;; with rest arguments – using the original form with (-> ret?) at the end
+    ((_ (procname args ... . rest)
+        (types ... :: rest? (-> ret?))
+        body ...)
+     (define-typed/helper procname (args ... . rest)
+       (types ...)
+       (each-rest rest?)
+       call-and-check-return-type/proc
+       ret?
+       body ...))
+    ((_ (procname args ... . rest)
+        (types ... (:: rest?) (-> ret?))
+        body ...)
+     (define-typed/helper procname (args ... . rest)
+       (types ...)
+       rest?
+       call-and-check-return-type/proc
+       ret?
+       body ...))
+    ((_ (procname args ... . rest)
+        (types ... (:: rest1? rest2? rest*? ...) (-> ret?))
+        body ...)
+     (define-typed/helper procname (args ... . rest)
+       (types ...)
+       (circular-rest (list rest1? rest2? rest*? ...))
        call-and-check-return-type/proc
        ret?
        body ...))
     ;; two or more return checkers: one per value (fixed number of
     ;; return values!)
     ((_ (procname args ...)
-        ((-> ret1? ret2* ret*? ...) types ...)
+        ((-> ret1? ret2? ret*? ...) types ...)
         body ...)
      (define-typed/helper procname (args ...)
        (types ...)
+       #f ;; TODO three more blocks for rest? support
        call-and-check-return-type/multiple
-       (list ret1? ret2* ret*? ...) ;; return-checkers
+       (list ret1? ret2? ret*? ...) ;; return-checkers
        body ...))
-    ;; alternate single return syntax with -> ret
-    ((_ (procname args ...)
-        (types ... -> ret?)
+    ;; with rest arguments – using the original form with (-> (list ret1? ret2? ret*? ...) ...) at the end
+    ((_ (procname args ... . rest)
+        (types ... :: rest? (-> ret1? ret2? ret*? ...))
         body ...)
-     (define-typed/helper procname (args ...)
+     (define-typed/helper procname (args ... . rest)
        (types ...)
-       call-and-check-return-type
-       ret?
+       (each-rest rest?)
+       call-and-check-return-type/multiple
+       (list ret1? ret2? ret*? ...)
        body ...))
-    ;; single return checker: only check one value, further values are
+    ((_ (procname args ... . rest)
+        (types ... (:: rest?) (-> ret1? ret2? ret*? ...))
+        body ...)
+     (define-typed/helper procname (args ... . rest)
+       (types ...)
+       rest?
+       call-and-check-return-type/multiple
+       (list ret1? ret2? ret*? ...)
+       body ...))
+    ((_ (procname args ... . rest)
+        (types ... (:: rest1? rest2? rest*? ...) (-> ret1? ret2? ret*? ...))
+        body ...)
+     (define-typed/helper procname (args ... . rest)
+       (types ...)
+       (circular-rest (list rest1? rest2? rest*? ...))
+       call-and-check-return-type/multiple
+       (list ret1? ret2? ret*? ...)
+       body ...))    ;; single return checker: only check one value, further values are
     ;; discarded except if ret? is #f: then do not check, keep all
     ;; values
     ;; Compat for return type delimited by ->: if there is one arg
@@ -290,10 +485,52 @@
         body ...)
      (define-typed/compat define-typed/helper (procname args ...)
        (ret? types ...)
+       body ...))
+    ;; rest arguments without return value
+    ;; check for each rest element
+    ((_ (procname args ... . rest)
+        ;; using the cons symbol :: from ocaml / ML languages to separate the rest types
+        (types ... :: rest?)
+        body ...)
+     (define-typed/helper procname (args ... . rest)
+       (types ...)
+       (each-rest rest?)
+       call-and-check-return-type
+       #f
+       body ...))
+    ;; check all rest arguments with the rest?
+    ((_ (procname args ... . rest)
+        ;; using the cons symbol :: from ocaml / ML languages to separate the rest types
+        (types ... (:: rest?))
+        body ...)
+     (define-typed/helper procname (args ... . rest)
+       (types ...)
+       rest?
+       call-and-check-return-type
+       #f
+       body ...))
+    ;; check rest arguments with circular rest?
+    ((_ (procname args ... . rest)
+        ;; using the cons symbol :: from ocaml / ML languages to separate the rest types
+        (types ... (:: rest1? rest2? rest*? ...))
+        body ...)
+     (define-typed/helper procname (args ... . rest)
+       (types ...)
+       (circular-rest (list rest1? rest2? rest*? ...))
+       call-and-check-return-type
+       #f
        body ...))))
+    ;; TODO add blocks for rest support without ret? Do not support
+    ;; ret? types ... :: rest? for now, that’s already provided by
+    ;; :: rest? ⇒ (types ... :: rest?) need not check for
+    ;; a return type as long as rest? does not support ret? t ...
 
-(define-syntax-rule (lambda-typed (args ...) body ...)
-  (define-typed (#f args ...) body ...))
+(define-syntax lambda-typed
+  (syntax-rules ()
+    ((_ (args ...) body ...)
+     (define-typed (#f args ...) body ...))
+    ((_ (args ... . rest) body ...)
+     (define-typed (#f args ... . rest) body ...))))
 
 
 ;; specific to define-typed*
@@ -319,11 +556,11 @@
 ;; helper with keyword support
 (define-syntax-rule (define-typed*/helper procname
                       (args ...) (types ...)
-                      ret-proc ret-values
+                      rest? ret-proc ret-values
                       body ...)
   (define-typed/base procname
     (args ...) (types ...)
-    ret-proc ret-values
+    rest? ret-proc ret-values
     define* lambda* check-types* ;; with keywords
     body ...))
 
@@ -349,6 +586,7 @@
     ((_ (procname args ...) (types ... -> ret?)
         body ...)
      (define-typed*/helper procname (args ...) (types ...)
+       #f
        call-and-check-return-type
        ret?
        body ...))
@@ -357,6 +595,7 @@
         ((-> ret?) types ...)
         body ...)
      (define-typed*/helper procname (args ...) (types ...)
+       #f
        call-and-check-return-type/proc
        ret?
        body ...))
@@ -367,6 +606,7 @@
         body ...)
      (define-typed*/helper procname (args ...)
        (types ...)
+       #f
        call-and-check-return-type/multiple
        (list ret1? ret2* ret*? ...) ;; return-checkers
        body ...))
