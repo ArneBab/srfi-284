@@ -63,13 +63,20 @@
 
 ;; inlinable add-properties!, because guild compile -W3 define-typed.scm
 ;; marks it as possibly unused otherwise.
-(define-inlinable (add-properties! proc name from-proc ret? rest? types)
+(define-inlinable (add-properties! proc name from-proc type-properties ret? rest? types)
   ;; add procedure properties via an inner procedure
   (set-procedure-properties! proc (procedure-properties from-proc))
   ;; record the types
   (set-procedure-property! proc 'return-types ret?)
   (set-procedure-property! proc 'argument-types types)
   (set-procedure-property! proc 'rest-types rest?)
+  ;; add displayed types
+  (set-procedure-property! proc 'return-types-display
+                           (procedure-property type-properties 'return-types-display))
+  (set-procedure-property! proc 'argument-types-display
+                           (procedure-property type-properties 'argument-types-display))
+  (set-procedure-property! proc 'rest-types-display
+                           (procedure-property type-properties 'rest-types-display))
   ;; preserve the name
   (set-procedure-property! proc 'name name))
 
@@ -134,9 +141,14 @@
                #f ret-proc ret-values
                def lamb check ;; define or define*, ...
                body ...))
-             (properties-helper (lamb (args ...) body ...)))
+             (properties-helper (lamb (args ...) body ...))
+             (type-properties-helper (lambda ()
+                                       #((return-types-display ret-values)
+                                         (argument-types-display types ...)
+                                         (rest-types-display rest?))
+                                       #f)))
          ;; add properties to the defined procedure
-         (add-properties! proc #f properties-helper
+         (add-properties! proc #f properties-helper type-properties-helper
                           ret-values #f (list types ...))
          proc)))
     ((_ #f ;; no name
@@ -151,9 +163,14 @@
                rest? ret-proc ret-values
                def lamb check ;; define or define*, ...
                body ...))
-             (properties-helper (lamb (args ...) body ...)))
+             (properties-helper (lamb (args ...) body ...))
+             (type-properties-helper (lambda ()
+                                       #((return-types-display ret-values)
+                                         (argument-types-display types ...)
+                                         (rest-types-display rest?))
+                                       #f)))
          ;; add properties to the defined procedure
-         (add-properties! proc #f properties-helper
+         (add-properties! proc #f properties-helper type-properties-helper
                           ret-values rest? (list types ...))
          proc)))
     ((_ procname ;; with name
@@ -168,9 +185,14 @@
              #f ret-proc ret-values
              def lamb check ;; define or define*, ...
              body ...))
-       (let ((properties-helper (lamb (args ...) body ...)))
+       (let ((properties-helper (lamb (args ...) body ...))
+             (type-properties-helper (lambda ()
+                                       #((return-types-display ret-values)
+                                         (argument-types-display types ...)
+                                         (rest-types-display rest?))
+                                       #f)))
          ;; add properties to the defined procedure
-         (add-properties! procname (and procname 'procname) properties-helper
+         (add-properties! procname (and procname 'procname) properties-helper type-properties-helper
                           ret-values #f (list types ...)))))
     ((_ procname ;; with name
         (args ... . rest) (types ...) ;; with rest argument
@@ -184,9 +206,14 @@
              rest? ret-proc ret-values
              def lamb check ;; define or define*, ...
              body ...))
-       (let ((properties-helper (lamb (args ... . rest) body ...)))
+       (let ((properties-helper (lamb (args ... . rest) body ...))
+             (type-properties-helper (lambda ()
+                                       #((return-types-display ret-values)
+                                         (argument-types-display types ...)
+                                         (rest-types-display rest?))
+                                       #f)))
          ;; add properties to the defined procedure
-         (add-properties! procname (and procname 'procname) properties-helper
+         (add-properties! procname (and procname 'procname) properties-helper type-properties-helper
                           ret-values rest? (list types ...)))))))
 
 ;; helper without keyword support
