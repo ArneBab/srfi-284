@@ -117,15 +117,17 @@
      (begin
        (check-argument-and-type-count
         (quote (args ...)) (quote (types ...)))
-       (lamb (args ... . rest)
-             ;; create a sub-procedure to run after typecheck
-             (def inner (lamb () body ...))
-             ;; typecheck the arguments
-             (check (types ...) (args ...))
-             ;; and the rest argument
-             (check (rest?) (rest))
-             ;; get and check the result
-             (ret-proc inner ret-values))))))
+       ;; bind rest? to avoid properties-calling at execution time
+       (let ((bound-rest? rest?))
+         (lamb (args ... . rest)
+               ;; create a sub-procedure to run after typecheck
+               (def inner (lamb () body ...))
+               ;; typecheck the arguments
+               (check (types ...) (args ...))
+               ;; and the rest argument
+               (check (bound-rest?) (rest))
+               ;; get and check the result
+               (ret-proc inner ret-values)))))))
 
 (define-syntax define-typed/base
   (syntax-rules ()
