@@ -293,6 +293,7 @@
 
 (define-syntax-rule (each-rest predicate)
   (let ((each-rest (lambda (args)
+                     #((display predicate)) ;; gives a readable representation, cannot use name because that has more automation
                       (let loop ((args args))
                         (cond ((null? args) #t)
                               ((predicate (car args))
@@ -304,6 +305,7 @@
 
 (define-syntax-rule (circular-rest predicates)
   (let ((circular-rest  (lambda (args)
+                          #((display predicates)) ;; gives a readable representation, cannot use name because that has more automation
                           (let loop ((preds predicates) (args args))
                             (cond ((null? args) #t)
                                   ((null? preds) (loop predicates args)) ;; circular
